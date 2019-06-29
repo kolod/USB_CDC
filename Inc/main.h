@@ -62,10 +62,10 @@ void Error_Handler(void);
 #define USB_VBUS_GPIO_Port GPIOA
 #define USB_EN_Pin GPIO_PIN_10
 #define USB_EN_GPIO_Port GPIOA
-#define USB_DP_Pin GPIO_PIN_11
+#define USB_DM_Pin GPIO_PIN_11
+#define USB_DM_GPIO_Port GPIOA
+#define USB_DP_Pin GPIO_PIN_12
 #define USB_DP_GPIO_Port GPIOA
-#define USB_DPA12_Pin GPIO_PIN_12
-#define USB_DPA12_GPIO_Port GPIOA
 #define SWDIO_Pin GPIO_PIN_13
 #define SWDIO_GPIO_Port GPIOA
 #define SWCLK_Pin GPIO_PIN_14
