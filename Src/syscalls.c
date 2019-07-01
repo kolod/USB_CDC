@@ -11,7 +11,7 @@
 **
 **  Environment : System Workbench for MCU
 **
-**  Distribution: The file is distributed “as is,” without any warranty
+**  Distribution: The file is distributed ï¿½as is,ï¿½ without any warranty
 **                of any kind.
 **
 *****************************************************************************
@@ -62,7 +62,11 @@ extern int __io_getchar(void) __attribute__((weak));
 
 register char * stack_ptr asm("sp");
 
-char *__env[1] = { 0 };
+char *__env[] = {
+	"TZ=EET-2EEST,M3.5.0/3,M10.5.0/4", // Europe/Kiev
+	0
+};
+
 char **environ = __env;
 
 

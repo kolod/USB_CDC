@@ -4,20 +4,20 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
+#include "realtimeclock.h"
+
 static void MX_GPIO_Init(void);
 static void MX_CRC_Init(void);
-static void MX_RTC_Init(void);
 
 CRC_HandleTypeDef hcrc;
-RTC_HandleTypeDef hrtc;
 
-int main(void) {
+extern "C" int main(void) {
 	const char text[] = "Hello!\n";
 
 	HAL_Init();
 	MX_GPIO_Init();
 	MX_CRC_Init();
-	MX_RTC_Init();
+	realtimeClock.init();
 	MX_USB_DEVICE_Init();
 
 	HAL_GPIO_WritePin(USB_EN_GPIO_Port, USB_EN_Pin, GPIO_PIN_SET);
@@ -31,15 +31,6 @@ int main(void) {
 static void MX_CRC_Init(void) {
 	hcrc.Instance = CRC;
 	if (HAL_CRC_Init(&hcrc) != HAL_OK) {
-		Error_Handler();
-	}
-}
-
-static void MX_RTC_Init(void) {
-	hrtc.Instance = RTC;
-	hrtc.Init.AsynchPrediv = RTC_AUTO_1_SECOND;
-	hrtc.Init.OutPut = RTC_OUTPUTSOURCE_ALARM;
-	if (HAL_RTC_Init(&hrtc) != HAL_OK) {
 		Error_Handler();
 	}
 }
@@ -101,8 +92,8 @@ static void MX_GPIO_Init(void) {
 
 }
 
-void Error_Handler(void) {}
+extern "C" void Error_Handler(void) {}
 
 #ifdef  USE_FULL_ASSERT
-void assert_failed(uint8_t *file, uint32_t line) {}
+extern "C" void assert_failed(uint8_t *file, uint32_t line) {}
 #endif // USE_FULL_ASSERT
