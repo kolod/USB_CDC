@@ -26,6 +26,8 @@ extern void main();
 extern void __libc_init_array();
 extern void __assert(const char *file, int line, const char *failedexpr);
 
+volatile uint32_t uptime;
+
 static inline bool SetSysClock() {
 
 	// SYSCLK, HCLK, PCLK2 and PCLK1 configuration
@@ -116,23 +118,60 @@ void Reset_Handler(void) {
 	for (;;);
 }
 
-// Default Handler for Exceptions / Interrupts
+
+// Default Handlers for Exceptions / Interrupts
 void Default_Handler(void) {
 	__assert(__FILE__, __LINE__, "Unhandled interrupt");
 }
 
+void Default_NMI_Handler(void) {}
+
+void Default_HardFault_Handler(void) {
+	__assert(__FILE__, __LINE__, "HardFault interrupt");
+	for (;;);
+}
+
+void Default_MemManage_Handler(void) {
+	__assert(__FILE__, __LINE__, "MemManage interrupt");
+	for (;;);
+}
+
+void Default_BusFault_Handler(void) {
+	__assert(__FILE__, __LINE__, "BusFault interrupt");
+	for (;;);
+}
+
+void Default_UsageFault_Handler(void) {
+	__assert(__FILE__, __LINE__, "UsageFault interrupt");
+	for (;;);
+}
+
+void Default_SVC_Handler(void) {}
+
+void Default_DebugMon_Handler(void) {}
+
+void Default_PendSV_Handler(void) {}
+
+void Default_SysTick_Handler(void) {
+	uptime++;
+
+#ifdef USE_HAL_DRIVER
+	HAL_IncTick();
+#endif
+
+}
 // Exception / Interrupt Handler
 
 // Cortex-M3 Processor Exceptions
-void NMI_Handler                     (void) __attribute__ ((weak, alias("Default_Handler")));
-void HardFault_Handler               (void) __attribute__ ((weak, alias("Default_Handler")));
-void MemManage_Handler               (void) __attribute__ ((weak, alias("Default_Handler")));
-void BusFault_Handler                (void) __attribute__ ((weak, alias("Default_Handler")));
-void UsageFault_Handler              (void) __attribute__ ((weak, alias("Default_Handler")));
-void SVC_Handler                     (void) __attribute__ ((weak, alias("Default_Handler")));
-void DebugMon_Handler                (void) __attribute__ ((weak, alias("Default_Handler")));
-void PendSV_Handler                  (void) __attribute__ ((weak, alias("Default_Handler")));
-void SysTick_Handler                 (void) __attribute__ ((weak, alias("Default_Handler")));
+void NMI_Handler                     (void) __attribute__ ((weak, alias("Default_NMI_Handler")));
+void HardFault_Handler               (void) __attribute__ ((weak, alias("Default_HardFault_Handler")));
+void MemManage_Handler               (void) __attribute__ ((weak, alias("Default_MemManage_Handler")));
+void BusFault_Handler                (void) __attribute__ ((weak, alias("Default_BusFault_Handler")));
+void UsageFault_Handler              (void) __attribute__ ((weak, alias("Default_UsageFault_Handler")));
+void SVC_Handler                     (void) __attribute__ ((weak, alias("Default_SVC_Handler")));
+void DebugMon_Handler                (void) __attribute__ ((weak, alias("Default_DebugMon_Handler")));
+void PendSV_Handler                  (void) __attribute__ ((weak, alias("Default_PendSV_Handler")));
+void SysTick_Handler                 (void) __attribute__ ((weak, alias("Default_SysTick_Handler")));
 
 // STM32F105RB Specific Interrupts
 void WWDG_IRQHandler                 (void) __attribute__ ((weak, alias("Default_Handler")));
