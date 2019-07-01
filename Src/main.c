@@ -14,13 +14,15 @@
   * the License. You may obtain a copy of the License at:
   *                             www.st.com/SLA0044
   *
-  ******************************************************************************
+  **********************nn********************************************************
   */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "utils.h"
 #include "usb_device.h"
+#include "usbd_cdc_if.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -108,7 +110,9 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  millisecondDelay(2000);
+	  const char text[] = "Hellow!\n";
+	  CDC_Transmit_FS((uint8_t*) text, (uint16_t) sizeof(text) - 1);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
