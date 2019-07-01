@@ -1,6 +1,9 @@
 // Copyright (c) 2018-2019 Alexandr Kolodkin <alexandr.kolodkin@gmail.com>
 // All rights reserved.
 
+#define HSE_STARTUP_TIMEOUT    ((uint32_t) 0x00001000)
+#define VECT_TAB_OFFSET        ((uint32_t)          0)
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -14,12 +17,6 @@ extern uint32_t _edata;     // end address for the .data section.
 extern uint32_t _sbss;      // start address for the .bss section.
 extern uint32_t _ebss;      // end address for the .bss section.
 extern uint32_t __StackTop; //
-
-#define VECT_TAB_OFFSET        ((uint32_t)          0)
-
-//#ifndef HSE_STARTUP_TIMEOUT
-#define HSE_STARTUP_TIMEOUT    ((uint32_t) 0x00000500)
-//#endif
 
 // Exception / Interrupt Handler Function Prototype
 typedef void( *pFunc )( void );
