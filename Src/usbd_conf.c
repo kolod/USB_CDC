@@ -27,7 +27,7 @@
 #include "usbd_cdc.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,58 +62,17 @@ static USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status);
 *******************************************************************************/
 /* MSP Init */
 
-void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(pcdHandle->Instance==USB_OTG_FS)
-  {
-  /* USER CODE BEGIN USB_OTG_FS_MspInit 0 */
-
-  /* USER CODE END USB_OTG_FS_MspInit 0 */
-  
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**USB_OTG_FS GPIO Configuration    
-    PA9     ------> USB_OTG_FS_VBUS 
-    */
-    GPIO_InitStruct.Pin = USB_VBUS_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(USB_VBUS_GPIO_Port, &GPIO_InitStruct);
-
-    /* Peripheral clock enable */
-    __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
-
-    /* Peripheral interrupt init */
-    HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
-  /* USER CODE BEGIN USB_OTG_FS_MspInit 1 */
-
-  /* USER CODE END USB_OTG_FS_MspInit 1 */
-  }
+void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle) {
+	if(pcdHandle->Instance==USB_OTG_FS) {
+		HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
+		HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+	}
 }
 
-void HAL_PCD_MspDeInit(PCD_HandleTypeDef* pcdHandle)
-{
-  if(pcdHandle->Instance==USB_OTG_FS)
-  {
-  /* USER CODE BEGIN USB_OTG_FS_MspDeInit 0 */
-
-  /* USER CODE END USB_OTG_FS_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_USB_OTG_FS_CLK_DISABLE();
-  
-    /**USB_OTG_FS GPIO Configuration    
-    PA9     ------> USB_OTG_FS_VBUS 
-    */
-    HAL_GPIO_DeInit(USB_VBUS_GPIO_Port, USB_VBUS_Pin);
-
-    /* Peripheral interrupt Deinit*/
-    HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
-
-  /* USER CODE BEGIN USB_OTG_FS_MspDeInit 1 */
-
-  /* USER CODE END USB_OTG_FS_MspDeInit 1 */
-  }
+void HAL_PCD_MspDeInit(PCD_HandleTypeDef* pcdHandle) {
+	if(pcdHandle->Instance==USB_OTG_FS) {
+		HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
+	}
 }
 
 /**

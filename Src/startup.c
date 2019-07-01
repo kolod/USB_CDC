@@ -10,6 +10,9 @@
 #include <string.h>
 #include "stm32f1xx.h"
 
+#include "utils.h"
+#include "config.h"
+
 // Linker generated Symbols
 extern uint32_t _sidata;    // start address for the initialization values of the .data section.
 extern uint32_t _sdata;     // start address for the .data section.
@@ -111,6 +114,16 @@ void Reset_Handler(void) {
 
 	// Настраиваем частоты тактования
 	if (!MySystemInit()) __assert(__FILE__, __LINE__, "SystemInit failed");
+
+	// Initialize GPIO
+//	GPIO_PIN_SET(USB_EN_GPIO_Port, USB_EN_Pin);
+
+	//             11111100                00000000
+	//             54321098                76543210
+	GPIOA->CRH = 0x88844343;GPIOA->CRL = 0x00000000;
+	GPIOB->CRH = 0x333333FF;GPIOB->CRL = 0x4B088320;
+	GPIOC->CRH = 0x44088833;GPIOC->CRL = 0x33000000;
+	GPIOD->CRH = 0x44444444;GPIOD->CRL = 0x44444844;
 
 	__libc_init_array();
 

@@ -1,8 +1,8 @@
 
 
-#include "utils.h"
 #include "config.h"
 #include "stm32f1xx.h"
+#include "utils.h"
 
 extern uint32_t uptime;
 
