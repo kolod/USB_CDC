@@ -7,16 +7,12 @@
 #include "realtimeclock.h"
 
 static void MX_GPIO_Init(void);
-static void MX_CRC_Init(void);
-
-CRC_HandleTypeDef hcrc;
 
 extern "C" int main(void) {
 	const char text[] = "Hello!\n";
 
 	HAL_Init();
 	MX_GPIO_Init();
-	MX_CRC_Init();
 	realtimeClock.init();
 	MX_USB_DEVICE_Init();
 
@@ -25,13 +21,6 @@ extern "C" int main(void) {
 	for(;;) {
 		CDC_Transmit_FS((uint8_t*) text, (uint16_t) sizeof(text) - 1);
 		millisecondDelay(2000);
-	}
-}
-
-static void MX_CRC_Init(void) {
-	hcrc.Instance = CRC;
-	if (HAL_CRC_Init(&hcrc) != HAL_OK) {
-		Error_Handler();
 	}
 }
 
