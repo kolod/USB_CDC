@@ -6,7 +6,6 @@
 #include "realtimeclock.h"
 #include "utils.h"
 
-
 extern "C" int main(void) {
 	const char text[] = "Hello!\n";
 
