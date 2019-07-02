@@ -72,6 +72,10 @@
   ******************************************************************************
   */
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
 
@@ -1416,6 +1420,9 @@ static HAL_StatusTypeDef PCD_EP_ISR_Handler(PCD_HandleTypeDef *hpcd)
 
 #endif /* HAL_PCD_MODULE_ENABLED */
 
+#ifdef __cplusplus
+}
+#endif
 
 /**
   * @}
