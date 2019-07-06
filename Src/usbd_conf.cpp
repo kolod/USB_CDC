@@ -9,7 +9,7 @@
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 void Error_Handler(void);
-static USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status);
+static UsbStatus USBD_Get_USB_Status(HAL_StatusTypeDef hal_status);
 
 /*******************************************************************************
                        LL Driver Callbacks (PCD -> USB Device Library)
@@ -98,12 +98,12 @@ static void PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 { 
-	USBD_SpeedTypeDef speed = USBD_SPEED_FULL;
+	UsbSpeed speed = UsbSpeed::USBD_SPEED_FULL;
 
 	if ( hpcd->Init.speed == PCD_SPEED_HIGH) {
-		speed = USBD_SPEED_HIGH;
+		speed = UsbSpeed::USBD_SPEED_HIGH;
 	} else if ( hpcd->Init.speed == PCD_SPEED_FULL) {
-		speed = USBD_SPEED_FULL;
+		speed = UsbSpeed::USBD_SPEED_FULL;
 	} else {
 		Error_Handler();
 	}
@@ -218,7 +218,7 @@ void HAL_PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
   * @param  pdev: Device handle
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
+UsbStatus USBD_LL_Init(USBD_HandleTypeDef *pdev)
 {
 	/* Init USB Ip. */
 	if (pdev->id == DEVICE_FS) {
@@ -256,7 +256,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 		HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
 		HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0x80);
 	}
-	return USBD_OK;
+	return UsbStatus::USBD_OK;
 }
 
 /**
@@ -264,9 +264,9 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
   * @param  pdev: Device handle
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_DeInit(USBD_HandleTypeDef *pdev) {
+UsbStatus USBD_LL_DeInit(USBD_HandleTypeDef *pdev) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_DeInit(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData));
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -279,9 +279,9 @@ USBD_StatusTypeDef USBD_LL_DeInit(USBD_HandleTypeDef *pdev) {
   * @param  pdev: Device handle
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_Start(USBD_HandleTypeDef *pdev) {
+UsbStatus USBD_LL_Start(USBD_HandleTypeDef *pdev) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_Start(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData));
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -294,9 +294,9 @@ USBD_StatusTypeDef USBD_LL_Start(USBD_HandleTypeDef *pdev) {
   * @param  pdev: Device handle
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_Stop(USBD_HandleTypeDef *pdev) {
+UsbStatus USBD_LL_Stop(USBD_HandleTypeDef *pdev) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_Stop(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData));
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -312,9 +312,9 @@ USBD_StatusTypeDef USBD_LL_Stop(USBD_HandleTypeDef *pdev) {
   * @param  ep_mps: Endpoint max packet size
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_OpenEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr, uint8_t ep_type, uint16_t ep_mps) {
+UsbStatus USBD_LL_OpenEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr, uint8_t ep_type, uint16_t ep_mps) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_EP_Open(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), ep_addr, ep_mps, ep_type);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -328,9 +328,9 @@ USBD_StatusTypeDef USBD_LL_OpenEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr, uin
   * @param  ep_addr: Endpoint number
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_CloseEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
+UsbStatus USBD_LL_CloseEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_EP_Close(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), ep_addr);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -344,9 +344,9 @@ USBD_StatusTypeDef USBD_LL_CloseEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
   * @param  ep_addr: Endpoint number
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_FlushEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
+UsbStatus USBD_LL_FlushEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_EP_Flush(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), ep_addr);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -360,9 +360,9 @@ USBD_StatusTypeDef USBD_LL_FlushEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
   * @param  ep_addr: Endpoint number
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_StallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
+UsbStatus USBD_LL_StallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_EP_SetStall(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), ep_addr);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -376,9 +376,9 @@ USBD_StatusTypeDef USBD_LL_StallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
   * @param  ep_addr: Endpoint number
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_ClearStallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
+UsbStatus USBD_LL_ClearStallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_EP_ClrStall(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), ep_addr);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -408,9 +408,9 @@ uint8_t USBD_LL_IsStallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr) {
   * @param  dev_addr: Device address
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_SetUSBAddress(USBD_HandleTypeDef *pdev, uint8_t dev_addr) {
+UsbStatus USBD_LL_SetUSBAddress(USBD_HandleTypeDef *pdev, uint8_t dev_addr) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_SetAddress(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), dev_addr);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -426,9 +426,9 @@ USBD_StatusTypeDef USBD_LL_SetUSBAddress(USBD_HandleTypeDef *pdev, uint8_t dev_a
   * @param  size: Data size    
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_Transmit(USBD_HandleTypeDef *pdev, uint8_t ep_addr, uint8_t *pbuf, uint16_t size) {
+UsbStatus USBD_LL_Transmit(USBD_HandleTypeDef *pdev, uint8_t ep_addr, uint8_t *pbuf, uint16_t size) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_EP_Transmit(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), ep_addr, pbuf, size);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -444,9 +444,9 @@ USBD_StatusTypeDef USBD_LL_Transmit(USBD_HandleTypeDef *pdev, uint8_t ep_addr, u
   * @param  size: Data size
   * @retval USBD status
   */
-USBD_StatusTypeDef USBD_LL_PrepareReceive(USBD_HandleTypeDef *pdev, uint8_t ep_addr, uint8_t *pbuf, uint16_t size) {
+UsbStatus USBD_LL_PrepareReceive(USBD_HandleTypeDef *pdev, uint8_t ep_addr, uint8_t *pbuf, uint16_t size) {
 	HAL_StatusTypeDef hal_status = HAL_OK;
-	USBD_StatusTypeDef usb_status = USBD_OK;
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	hal_status = HAL_PCD_EP_Receive(reinterpret_cast<PCD_HandleTypeDef*>(pdev->pData), ep_addr, pbuf, size);
 	usb_status =  USBD_Get_USB_Status(hal_status);
@@ -502,24 +502,24 @@ void USBD_static_free(void *p) {}
   * @param  hal_status: HAL status
   * @retval USB status
   */
-USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status) {
-	USBD_StatusTypeDef usb_status = USBD_OK;
+UsbStatus USBD_Get_USB_Status(HAL_StatusTypeDef hal_status) {
+	UsbStatus usb_status = UsbStatus::USBD_OK;
 
 	switch (hal_status) {
 	case HAL_OK :
-		usb_status = USBD_OK;
+		usb_status = UsbStatus::USBD_OK;
 		break;
 	case HAL_ERROR :
-		usb_status = USBD_FAIL;
+		usb_status = UsbStatus::USBD_FAIL;
 		break;
 	case HAL_BUSY :
-		usb_status = USBD_BUSY;
+		usb_status = UsbStatus::USBD_BUSY;
 		break;
 	case HAL_TIMEOUT :
-		usb_status = USBD_FAIL;
+		usb_status = UsbStatus::USBD_FAIL;
 		break;
 	default :
-		usb_status = USBD_FAIL;
+		usb_status = UsbStatus::USBD_FAIL;
 		break;
 	}
 	return usb_status;

@@ -7,6 +7,9 @@
 
 #include "stm32f1xx.h"
 #include "stm32f1xx_hal.h"
+#include "usbd_def.h"
+
+#include "utils.h"
 
 /*
 #undef USBx_DEVICE
@@ -25,49 +28,105 @@ class USB_Class {
 public:
 	explicit USB_Class();
 
-	static void init();
-	static void interrupt();
+	void init();
+	void interrupt();
 
-	static HAL_StatusTypeDef writePacket(uint8_t *source, uint32_t epnum, size_t length);
-	static HAL_StatusTypeDef writeEmptyTxFifo(PCD_HandleTypeDef *hpcd, uint32_t epnum);
+	void activateSetup();
+	HAL_StatusTypeDef writePacket(uint8_t *source, uint32_t epnum, size_t length);
+	HAL_StatusTypeDef writeEmptyTxFifo(PCD_HandleTypeDef *hpcd, uint32_t epnum);
+
 
 private:
 
-	static inline void maskInterrupt(uint32_t interrupt) {
+	void start();
+	void stall(uint8_t endpoint);
+
+	void onConnect();
+	void onDisconnect();
+	void onIsoOutIncomlete();
+	void onIsoInIncomplete();
+	void onFrameStart();
+	void onRxQLevel();
+	void onEnumerationDone();
+	void onReset();
+	void onSuspend();
+	void onResume();
+	void onOut();
+	void onIn();
+	void onSetupStage();
+	void onStdDevReq();
+	void onGetDescriptor();
+	void onSetAddress();
+	void onSetConfig();
+	void onGetConfig();
+	void onGetStatus();
+	void onSetFeature();
+	void onClearFeature();
+
+	inline void controllError() {
+		stall(0x80);
+		stall(0x00);
+	}
+
+	inline void enableGlobalInterrupt() {
+		USB_OTG_FS->GAHBCFG |= USB_OTG_GAHBCFG_GINT;
+	}
+
+	inline void deviceConnect() {
+		device()->DCTL &= ~USB_OTG_DCTL_SDIS;
+	}
+
+	inline void maskInterrupt(uint32_t interrupt) {
 		USB_OTG_FS->GINTMSK &= ~interrupt;
 	}
 
-	static inline void unmaskInterrupt(uint32_t interrupt) {
+	inline void unmaskInterrupt(uint32_t interrupt) {
 		USB_OTG_FS->GINTMSK |= interrupt;
 	}
 
-	static inline void clearInEndpointInterrupt(int endpoint, uint32_t interrupt) {
+	inline void clearInEndpointInterrupt(int endpoint, uint32_t interrupt) {
 		inEndpoint(endpoint)->DIEPINT = interrupt;
 	}
 
-	static inline void clearOutEndpointInterrupt(int endpoint, uint32_t interrupt) {
+	inline void clearOutEndpointInterrupt(int endpoint, uint32_t interrupt) {
 		outEndpoint(endpoint)->DOEPINT = interrupt;
 	}
 
-	static inline uint32_t readInterrupts(void) {
+	inline uint32_t readInterrupts(void) {
 		return USB_OTG_FS->GINTSTS & USB_OTG_FS->GINTMSK;
 	}
 
-	static inline void clearInerrupt(uint32_t interrupt) {
+	inline void clearInerrupt(uint32_t interrupt) {
 		USB_OTG_FS->GINTSTS = interrupt;
 	}
 
-	static inline bool isInvalidInterrupt(void) {
+	inline bool isInvalidInterrupt(void) {
 		return readInterrupts() == 0U;
 	}
 
-	static inline bool getInterruptState(uint32_t interrupt) {
+	inline bool getInterruptState(uint32_t interrupt) {
 		return (readInterrupts() & interrupt) == interrupt;
 	}
 
 	// Get OTG mode. Return values: true - host, false - device
-	static inline bool getMode() {
+	inline bool getMode() {
 		return getInterruptState(USB_OTG_GINTSTS_CMOD);
+	}
+
+	inline uint32_t ReadDevAllOutEpInterrupt() {
+		return (device()->DAINT & device()->DAINTMSK & 0xFFFF0000) >> 16;
+	}
+
+	inline uint32_t ReadDevOutEPInterrupt(uint8_t epnum) {
+		return outEndpoint(epnum)->DOEPINT & device()->DOEPMSK;
+	}
+
+	inline uint32_t ReadDevAllInEpInterrupt() {
+		return device()->DAINT & device()->DAINTMSK & 0xFFFF;
+	}
+
+	inline uint32_t ReadDevInEPInterrupt(uint8_t epnum) {
+		return inEndpoint(epnum)->DIEPINT & (((device()->DIEPEMPMSK >> epnum) & 1) << 7 | device()->DIEPMSK);
 	}
 
 	constexpr static USB_OTG_DeviceTypeDef *device() {

@@ -15,13 +15,13 @@
 static void Get_SerialNum(void);
 static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len);
 
-uint8_t * USBD_FS_DeviceDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
-uint8_t * USBD_FS_LangIDStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
-uint8_t * USBD_FS_ManufacturerStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
-uint8_t * USBD_FS_ProductStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
-uint8_t * USBD_FS_SerialStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
-uint8_t * USBD_FS_ConfigStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
-uint8_t * USBD_FS_InterfaceStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
+uint8_t * USBD_FS_DeviceDescriptor(UsbSpeed speed, uint16_t *length);
+uint8_t * USBD_FS_LangIDStrDescriptor(UsbSpeed speed, uint16_t *length);
+uint8_t * USBD_FS_ManufacturerStrDescriptor(UsbSpeed speed, uint16_t *length);
+uint8_t * USBD_FS_ProductStrDescriptor(UsbSpeed speed, uint16_t *length);
+uint8_t * USBD_FS_SerialStrDescriptor(UsbSpeed speed, uint16_t *length);
+uint8_t * USBD_FS_ConfigStrDescriptor(UsbSpeed speed, uint16_t *length);
+uint8_t * USBD_FS_InterfaceStrDescriptor(UsbSpeed speed, uint16_t *length);
 
 #ifdef USBD_SUPPORT_USER_STRING_DESC
 uint8_t * USBD_FS_USRStringDesc(USBD_SpeedTypeDef speed, uint8_t idx, uint16_t *length);
@@ -104,7 +104,7 @@ __ALIGN_BEGIN uint8_t USBD_StringSerial[USB_SIZ_STRING_SERIAL] __ALIGN_END = {
   * @param  length : Pointer to data length variable
   * @retval Pointer to descriptor buffer
   */
-uint8_t * USBD_FS_DeviceDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
+uint8_t * USBD_FS_DeviceDescriptor(UsbSpeed speed, uint16_t *length)
 {
   UNUSED(speed);
   *length = sizeof(USBD_FS_DeviceDesc);
@@ -117,7 +117,7 @@ uint8_t * USBD_FS_DeviceDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
   * @param  length : Pointer to data length variable
   * @retval Pointer to descriptor buffer
   */
-uint8_t * USBD_FS_LangIDStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
+uint8_t * USBD_FS_LangIDStrDescriptor(UsbSpeed speed, uint16_t *length)
 {
   UNUSED(speed);
   *length = sizeof(USBD_LangIDDesc);
@@ -130,17 +130,13 @@ uint8_t * USBD_FS_LangIDStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
   * @param  length : Pointer to data length variable
   * @retval Pointer to descriptor buffer
   */
-uint8_t * USBD_FS_ProductStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
-{
-  if(speed == 0)
-  {
-    USBD_GetString((uint8_t *)USBD_PRODUCT_STRING_FS, USBD_StrDesc, length);
-  }
-  else
-  {
-    USBD_GetString((uint8_t *)USBD_PRODUCT_STRING_FS, USBD_StrDesc, length);
-  }
-  return USBD_StrDesc;
+uint8_t * USBD_FS_ProductStrDescriptor(UsbSpeed speed, uint16_t *length) {
+	if (speed == UsbSpeed::USBD_SPEED_HIGH) {
+		USBD_GetString((uint8_t*) USBD_PRODUCT_STRING_FS, USBD_StrDesc, length);
+	} else {
+		USBD_GetString((uint8_t*) USBD_PRODUCT_STRING_FS, USBD_StrDesc, length);
+	}
+	return USBD_StrDesc;
 }
 
 /**
@@ -149,7 +145,7 @@ uint8_t * USBD_FS_ProductStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length
   * @param  length : Pointer to data length variable
   * @retval Pointer to descriptor buffer
   */
-uint8_t * USBD_FS_ManufacturerStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length) {
+uint8_t * USBD_FS_ManufacturerStrDescriptor(UsbSpeed speed, uint16_t *length) {
 	UNUSED(speed);
 	USBD_GetString((uint8_t *)USBD_MANUFACTURER_STRING, USBD_StrDesc, length);
 	return USBD_StrDesc;
@@ -161,7 +157,7 @@ uint8_t * USBD_FS_ManufacturerStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *l
   * @param  length : Pointer to data length variable
   * @retval Pointer to descriptor buffer
   */
-uint8_t * USBD_FS_SerialStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length) {
+uint8_t * USBD_FS_SerialStrDescriptor(UsbSpeed speed, uint16_t *length) {
 	UNUSED(speed);
 	*length = USB_SIZ_STRING_SERIAL;
 
@@ -177,7 +173,7 @@ uint8_t * USBD_FS_SerialStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
   * @param  length : Pointer to data length variable
   * @retval Pointer to descriptor buffer
   */
-uint8_t * USBD_FS_ConfigStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length) {
+uint8_t * USBD_FS_ConfigStrDescriptor(UsbSpeed speed, uint16_t *length) {
 	UNUSED(speed);
 	USBD_GetString((uint8_t *)USBD_CONFIGURATION_STRING_FS, USBD_StrDesc, length);
 
@@ -190,7 +186,7 @@ uint8_t * USBD_FS_ConfigStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
   * @param  length : Pointer to data length variable
   * @retval Pointer to descriptor buffer
   */
-uint8_t * USBD_FS_InterfaceStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length) {
+uint8_t * USBD_FS_InterfaceStrDescriptor(UsbSpeed speed, uint16_t *length) {
 	UNUSED(speed);
 	USBD_GetString((uint8_t *)USBD_INTERFACE_STRING_FS, USBD_StrDesc, length);
 

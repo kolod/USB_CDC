@@ -1,18 +1,17 @@
 
 #include "main.h"
-#include "usb_device.h"
 #include "usbd_cdc_if.h"
 
-#include "realtimeclock.h"
 #include "utils.h"
-
+#include "usb.h"
+#include "realtimeclock.h"
 
 extern "C" int main(void) {
 	const char text[] = "Hello!\n";
 
 	HAL_Init();
 	realtimeClock.init();
-	MX_USB_DEVICE_Init();
+	USB.init();
 
 	GPIO_PIN_SET(USB_EN_GPIO_Port, USB_EN_Pin);
 

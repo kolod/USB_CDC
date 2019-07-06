@@ -11,8 +11,8 @@ static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 static void USBD_ClrFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
 static uint8_t USBD_GetLen(uint8_t *buf);
 
-USBD_StatusTypeDef  USBD_StdDevReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
-	USBD_StatusTypeDef ret = USBD_OK;
+UsbStatus  USBD_StdDevReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
+	UsbStatus ret = UsbStatus::USBD_OK;
 
 	switch (req->bRequest) {
 	case USB_REQ_GET_DESCRIPTOR:
@@ -58,8 +58,8 @@ USBD_StatusTypeDef  USBD_StdDevReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTyped
 * @param  req: usb request
 * @retval status
 */
-USBD_StatusTypeDef USBD_StdItfReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
-	USBD_StatusTypeDef ret = USBD_OK;
+UsbStatus USBD_StdItfReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
+	UsbStatus ret = UsbStatus::USBD_OK;
 
 	switch (pdev->dev_state) {
 	case USBD_STATE_CONFIGURED:
@@ -67,7 +67,7 @@ USBD_StatusTypeDef USBD_StdItfReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypede
 		if (LOBYTE(req->wIndex) <= USBD_MAX_NUM_INTERFACES) {
 			pdev->pClass->Setup (pdev, req);
 
-			if((req->wLength == 0)&& (ret == USBD_OK))
+			if((req->wLength == 0)&& (ret == UsbStatus::USBD_OK))
 			{
 				USBD_CtlSendStatus(pdev);
 			}
@@ -80,7 +80,7 @@ USBD_StatusTypeDef USBD_StdItfReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypede
 		USBD_CtlError(pdev , req);
 		break;
 	}
-	return USBD_OK;
+	return UsbStatus::USBD_OK;
 }
 
 /**
@@ -90,16 +90,16 @@ USBD_StatusTypeDef USBD_StdItfReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypede
 * @param  req: usb request
 * @retval status
 */
-USBD_StatusTypeDef  USBD_StdEPReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
+UsbStatus  USBD_StdEPReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	uint8_t   ep_addr;
-	USBD_StatusTypeDef ret = USBD_OK;
+	UsbStatus ret = UsbStatus::USBD_OK;
 	USBD_EndpointTypeDef   *pep;
 	ep_addr  = LOBYTE(req->wIndex);
 
 	/* Check if it is a class request */
 	if ((req->bmRequest & 0x60) == 0x20) {
 		pdev->pClass->Setup (pdev, req);
-		return USBD_OK;
+		return UsbStatus::USBD_OK;
 	}
 
 	switch (req->bRequest) {
@@ -198,7 +198,7 @@ static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *r
 		break;
 
 	case USB_DESC_TYPE_CONFIGURATION:
-		if (pdev->dev_speed == USBD_SPEED_HIGH ) {
+		if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH ) {
 			pbuf   = (uint8_t *)pdev->pClass->GetHSConfigDescriptor(&len);
 			pbuf[1] = USB_DESC_TYPE_CONFIGURATION;
 		} else {
@@ -245,7 +245,7 @@ static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *r
 		break;
 		case USB_DESC_TYPE_DEVICE_QUALIFIER:
 
-			if (pdev->dev_speed == USBD_SPEED_HIGH  ) {
+			if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH  ) {
 				pbuf   = (uint8_t *)pdev->pClass->GetDeviceQualifierDescriptor(&len);
 				break;
 			} else {
@@ -254,7 +254,7 @@ static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *r
 			}
 
 		case USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION:
-			if (pdev->dev_speed == USBD_SPEED_HIGH  ) {
+			if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH  ) {
 				pbuf   = (uint8_t *)pdev->pClass->GetOtherSpeedConfigDescriptor(&len);
 				pbuf[1] = USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION;
 				break;
@@ -327,7 +327,7 @@ static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 			if (cfgidx) {
 				pdev->dev_config = cfgidx;
 				pdev->dev_state = USBD_STATE_CONFIGURED;
-				if (USBD_SetClassConfig(pdev , cfgidx) == USBD_FAIL) {
+				if (USBD_SetClassConfig(pdev , cfgidx) == UsbStatus::USBD_FAIL) {
 					USBD_CtlError(pdev , req);
 					return;
 				}
@@ -350,7 +350,7 @@ static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 
 				/* set new configuration */
 				pdev->dev_config = cfgidx;
-				if (USBD_SetClassConfig(pdev , cfgidx) == USBD_FAIL) {
+				if (USBD_SetClassConfig(pdev , cfgidx) == UsbStatus::USBD_FAIL) {
 					USBD_CtlError(pdev , req);
 					return;
 				}

@@ -39,6 +39,9 @@
 #define HIBYTE(x)                 ((uint8_t)((x & 0xFF00) >>8))
 #endif
 
+#ifndef WORD
+#define WORD(a,b)                 ((((uint16_t) (a)) << 8) | ((uint16_t) (b)))
+#endif
 
 #define GPIO_PIN_SET(port, pin)   WRITE_REG(port->BSRR, pin)
 #define GPIO_PIN_RESET(port, pin) WRITE_REG(port->BSRR, (pin << 16))
