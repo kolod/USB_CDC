@@ -23,6 +23,8 @@
 #define USBx_DFIFO(i) *(__IO uint32_t*)              (USB_OTG_FS_PERIPH_BASE + USB_OTG_FIFO_BASE         + (i) * USB_OTG_FIFO_SIZE)
 */
 
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+
 class USB_Class {
 
 public:
@@ -32,7 +34,7 @@ public:
 	void interrupt();
 
 	void activateSetup();
-	HAL_StatusTypeDef writePacket(uint8_t *source, uint32_t epnum, size_t length);
+	void writePacket(uint8_t *source, uint32_t epnum, size_t length);
 	HAL_StatusTypeDef writeEmptyTxFifo(PCD_HandleTypeDef *hpcd, uint32_t epnum);
 
 
@@ -40,6 +42,10 @@ private:
 
 	void start();
 	void setStall(uint8_t endpoint);
+	void endpointTransmit(uint8_t ep_addr, uint8_t *pBuf, uint32_t len);
+	void startEndpoint0Xfer(USB_OTG_EPTypeDef *ep);
+	void startEndpointXfer(USB_OTG_EPTypeDef *ep);
+
 
 	void onConnect();
 	void onDisconnect();
@@ -73,6 +79,11 @@ private:
 		outEndpoint(0)->DOEPTSIZ |= (1 << USB_OTG_DOEPTSIZ_PKTCNT_Pos) & USB_OTG_DOEPTSIZ_PKTCNT;
 		outEndpoint(0)->DOEPTSIZ |= (3 * 8);
 		outEndpoint(0)->DOEPTSIZ |= USB_OTG_DOEPTSIZ_STUPCNT;
+	}
+
+	inline void sendControlStatus() {
+		reinterpret_cast<USBD_HandleTypeDef*>(hpcd_USB_OTG_FS.pData)->ep0_state = USBD_EP0_STATUS_IN;   // Set EP0 State
+		endpointTransmit(0x00, nullptr, 0);                                                             // Start the transfer
 	}
 
 	inline void enableGlobalInterrupt() {

@@ -8,7 +8,7 @@
 #include "usbd_ctlreq.h"
 #include "usbd_ioreq.h"
 
-extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+
 USBD_HandleTypeDef hUsbDeviceFS;
 
 USB_Class::USB_Class() {
@@ -57,6 +57,149 @@ void USB_Class::setStall(uint8_t endpointAddress) {
 	if (ep->num == 0) endpoint0OutStart();
 }
 
+void USB_Class::startEndpoint0Xfer(USB_OTG_EPTypeDef *ep) {
+	if (ep->is_in) { /* IN endpoint */
+		/* Zero Length Packet? */
+		if (ep->xfer_len == 0) {
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_PKTCNT);
+			inEndpoint(ep->num)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_PKTCNT & (1 << 19));
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_XFRSIZ);
+		} else {
+			/* Program the transfer size and packet count
+			 * as follows: xfersize = N * maxpacket +
+			 * short_packet pktcnt = N + (short_packet
+			 * exist ? 1 : 0)
+			 */
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_XFRSIZ);
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_PKTCNT);
+
+			if (ep->xfer_len > ep->maxpacket) ep->xfer_len = ep->maxpacket;
+
+			inEndpoint(ep->num)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_PKTCNT & (1 << 19));
+			inEndpoint(ep->num)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_XFRSIZ & ep->xfer_len);
+		}
+
+		// Enable the Tx FIFO Empty Interrupt for this EP
+		if (ep->xfer_len > 0) {
+			device()->DIEPEMPMSK |= 1 << (ep->num);
+		}
+
+		/* EP enable, IN data in FIFO */
+		inEndpoint(ep->num)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);
+	} else /* OUT endpoint */ {
+		/* Program the transfer size and packet count as follows:
+		 * pktcnt = N
+		 * xfersize = N * maxpacket
+		 */
+		outEndpoint(ep->num)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_XFRSIZ);
+		outEndpoint(ep->num)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_PKTCNT);
+
+		if (ep->xfer_len > 0) ep->xfer_len = ep->maxpacket;
+
+		outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (1 << 19));
+		outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & (ep->maxpacket));
+
+		/* EP enable */
+		outEndpoint(ep->num)->DOEPCTL |= (USB_OTG_DOEPCTL_CNAK | USB_OTG_DOEPCTL_EPENA);
+	}
+}
+
+void USB_Class::startEndpointXfer(USB_OTG_EPTypeDef *ep) {
+	uint16_t pktcnt = 0;
+
+	/* IN endpoint */
+	if (ep->is_in) {
+		/* Zero Length Packet? */
+		if (ep->xfer_len == 0) {
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_PKTCNT);
+			inEndpoint(ep->num)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_PKTCNT & (1 << 19)) ;
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_XFRSIZ);
+		} else {
+			/* Program the transfer size and packet count
+			 * as follows: xfersize = N * maxpacket +
+			 * short_packet pktcnt = N + (short_packet
+			 * exist ? 1 : 0)
+			 */
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_XFRSIZ);
+			inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_PKTCNT);
+			inEndpoint(ep->num)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_PKTCNT & (((ep->xfer_len + ep->maxpacket -1)/ ep->maxpacket) << 19)) ;
+			inEndpoint(ep->num)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_XFRSIZ & ep->xfer_len);
+
+			if (ep->type == EP_TYPE_ISOC) {
+				inEndpoint(ep->num)->DIEPTSIZ &= ~(USB_OTG_DIEPTSIZ_MULCNT);
+				inEndpoint(ep->num)->DIEPTSIZ |= (USB_OTG_DIEPTSIZ_MULCNT & (1 << 29));
+			}
+		}
+
+		if (ep->type != EP_TYPE_ISOC) {
+			/* Enable the Tx FIFO Empty Interrupt for this EP */
+			if (ep->xfer_len > 0) {
+				device()->DIEPEMPMSK |= 1 << ep->num;
+			}
+		}
+
+		if (ep->type == EP_TYPE_ISOC) {
+			if ((device()->DSTS & ( 1 << 8 )) == 0) {
+				inEndpoint(ep->num)->DIEPCTL |= USB_OTG_DIEPCTL_SODDFRM;
+			} else {
+				inEndpoint(ep->num)->DIEPCTL |= USB_OTG_DIEPCTL_SD0PID_SEVNFRM;
+			}
+		}
+
+		/* EP enable, IN data in FIFO */
+		inEndpoint(ep->num)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);
+
+		if (ep->type == EP_TYPE_ISOC) {
+			writePacket(ep->xfer_buff, ep->num, ep->xfer_len);
+		}
+	} else /* OUT endpoint */ {
+		/* Program the transfer size and packet count as follows:
+		 * pktcnt = N
+		 * xfersize = N * maxpacket
+		 */
+		outEndpoint(ep->num)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_XFRSIZ);
+		outEndpoint(ep->num)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_PKTCNT);
+
+		if (ep->xfer_len == 0) {
+			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & ep->maxpacket);
+			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (1 << 19));
+		} else {
+			pktcnt = (ep->xfer_len + ep->maxpacket -1)/ ep->maxpacket;
+			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (pktcnt << 19));
+			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & (ep->maxpacket * pktcnt));
+		}
+
+		if (ep->type == EP_TYPE_ISOC) {
+			if ((device()->DSTS & ( 1 << 8 )) == 0) {
+				outEndpoint(ep->num)->DOEPCTL |= USB_OTG_DOEPCTL_SODDFRM;
+			} else {
+				outEndpoint(ep->num)->DOEPCTL |= USB_OTG_DOEPCTL_SD0PID_SEVNFRM;
+			}
+		}
+		/* EP enable */
+		outEndpoint(ep->num)->DOEPCTL |= (USB_OTG_DOEPCTL_CNAK | USB_OTG_DOEPCTL_EPENA);
+	}
+}
+
+void USB_Class::endpointTransmit(uint8_t ep_addr, uint8_t *pBuf, uint32_t len) {
+	PCD_EPTypeDef *ep = NULL;
+
+	ep = &hpcd_USB_OTG_FS.IN_ep[ep_addr & 0x7FU];
+
+	/*setup and start the Xfer */
+	ep->xfer_buff  = pBuf;
+	ep->xfer_len   = len;
+	ep->xfer_count = 0U;
+	ep->is_in      = 1U;
+	ep->num        = ep_addr & 0x7FU;
+
+	if ((ep_addr & 0x7FU) == 0U) {
+		startEndpoint0Xfer(ep);
+	} else {
+		startEndpointXfer(ep);
+	}
+}
+
 void USB_Class::activateSetup() {
 
 	/* Set the MPS of the IN EP based on the enumeration speed */
@@ -68,13 +211,11 @@ void USB_Class::activateSetup() {
 	device()->DCTL |= USB_OTG_DCTL_CGINAK;
 }
 
-HAL_StatusTypeDef USB_Class::writePacket(uint8_t *source, uint32_t epnum, size_t length) {
+void USB_Class::writePacket(uint8_t *source, uint32_t epnum, size_t length) {
 	uint32_t count32b =  (length + 3) / 4;
-
-	for (uint32_t index = 0; index < count32b; index++, source += 4)
+	for (uint32_t index = 0; index < count32b; index++, source += 4) {
 		*fifo(epnum) = *(reinterpret_cast<__packed uint32_t *>(source));
-
-	return HAL_OK;
+	}
 }
 
 HAL_StatusTypeDef USB_Class::writeEmptyTxFifo(PCD_HandleTypeDef *hpcd, uint32_t epnum) {
@@ -548,7 +689,7 @@ void USB_Class::onSetAddress() {
 		} else {
 			pdev->dev_address = dev_addr;
 			USBD_LL_SetUSBAddress(pdev, dev_addr);
-			USBD_CtlSendStatus(pdev);
+			sendControlStatus();
 
 			if (dev_addr != 0) {
 				pdev->dev_state  = USBD_STATE_ADDRESSED;
@@ -579,9 +720,9 @@ void USB_Class::onSetConfig() {
 					controllError();
 					return;
 				}
-				USBD_CtlSendStatus(pdev);
+				sendControlStatus();
 			} else {
-				USBD_CtlSendStatus(pdev);
+				sendControlStatus();
 			}
 			break;
 
@@ -590,7 +731,7 @@ void USB_Class::onSetConfig() {
 				pdev->dev_state = USBD_STATE_ADDRESSED;
 				pdev->dev_config = cfgidx;
 				USBD_ClrClassConfig(pdev , cfgidx);
-				USBD_CtlSendStatus(pdev);
+				sendControlStatus();
 
 			} else  if (cfgidx != pdev->dev_config) {
 				/* Clear old configuration */
@@ -602,9 +743,9 @@ void USB_Class::onSetConfig() {
 					controllError();
 					return;
 				}
-				USBD_CtlSendStatus(pdev);
+				sendControlStatus();
 			} else {
-				USBD_CtlSendStatus(pdev);
+				sendControlStatus();
 			}
 			break;
 
@@ -673,7 +814,7 @@ void USB_Class::onSetFeature() {
 	if (pdev->request.wValue == USB_FEATURE_REMOTE_WAKEUP) {
 		pdev->dev_remote_wakeup = 1;
 		pdev->pClass->Setup (pdev, &pdev->request);
-		USBD_CtlSendStatus(pdev);
+		sendControlStatus();
 	}
 }
 
@@ -687,7 +828,7 @@ void USB_Class::onClearFeature() {
 		if (pdev->request.wValue == USB_FEATURE_REMOTE_WAKEUP) {
 			pdev->dev_remote_wakeup = 0;
 			pdev->pClass->Setup (pdev, &pdev->request);
-			USBD_CtlSendStatus(pdev);
+			sendControlStatus();
 		}
 		break;
 
