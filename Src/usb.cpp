@@ -29,23 +29,32 @@ void USB_Class::start() {
 	enableGlobalInterrupt();
 }
 
-void USB_Class::stall(uint8_t endpointAddress) {
+void USB_Class::setStall(uint8_t endpointAddress) {
 	PCD_EPTypeDef *ep = nullptr;
 
-	if ((0x80U & endpointAddress) == 0x80U) {
+	if (0x80U & endpointAddress) {
 		ep = &hpcd_USB_OTG_FS.IN_ep[endpointAddress & 0x7FU];
 	} else {
 		ep = &hpcd_USB_OTG_FS.OUT_ep[endpointAddress];
 	}
 
-	ep->is_stall = 1U;
-	ep->num   = endpointAddress & 0x7FU;
-	ep->is_in = ((endpointAddress & 0x80U) == 0x80U);
+	ep->is_stall = true;
+	ep->num      = endpointAddress & 0x7FU;
+	ep->is_in    = endpointAddress & 0x80U;
 
-	USB_EPSetStall(USB_OTG_FS, ep);
-	if ((endpointAddress & 0x7FU) == 0U) {
-		USB_EP0_OutStart(USB_OTG_FS, (uint8_t *) hpcd_USB_OTG_FS.Setup);
+	if (ep->is_in) {
+		if (((inEndpoint(ep->num)->DIEPCTL) & USB_OTG_DIEPCTL_EPENA) == 0) {
+			inEndpoint(ep->num)->DIEPCTL &= ~(USB_OTG_DIEPCTL_EPDIS);
+		}
+		inEndpoint(ep->num)->DIEPCTL |= USB_OTG_DIEPCTL_STALL;
+	} else {
+		if (((outEndpoint(ep->num)->DOEPCTL) & USB_OTG_DOEPCTL_EPENA) == 0) {
+			outEndpoint(ep->num)->DOEPCTL &= ~(USB_OTG_DOEPCTL_EPDIS);
+		}
+		outEndpoint(ep->num)->DOEPCTL |= USB_OTG_DOEPCTL_STALL;
 	}
+
+	if (ep->num == 0) endpoint0OutStart();
 }
 
 void USB_Class::activateSetup() {

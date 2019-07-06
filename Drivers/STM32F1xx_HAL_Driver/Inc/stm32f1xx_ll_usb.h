@@ -37,6 +37,8 @@
 #ifndef __STM32F1xx_LL_USB_H
 #define __STM32F1xx_LL_USB_H
 
+#include "stdbool.h"
+
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -127,40 +129,20 @@ typedef struct
   uint32_t use_external_vbus;    /*!< Enable or disable the use of the external VBUS.                        */
 }USB_OTG_CfgTypeDef;
 
-typedef struct
-{
-  uint8_t   num;            /*!< Endpoint number
-                                This parameter must be a number between Min_Data = 1 and Max_Data = 15    */
-  
-  uint8_t   is_in;          /*!< Endpoint direction
-                                This parameter must be a number between Min_Data = 0 and Max_Data = 1     */
-  
-  uint8_t   is_stall;       /*!< Endpoint stall condition
-                                This parameter must be a number between Min_Data = 0 and Max_Data = 1     */
-  
-  uint8_t   type;           /*!< Endpoint type
-                                 This parameter can be any value of @ref USB_EP_Type_                     */
-  
-  uint8_t   data_pid_start; /*!< Initial data PID
-                                This parameter must be a number between Min_Data = 0 and Max_Data = 1     */
-  
-  uint8_t   even_odd_frame; /*!< IFrame parity
-                                 This parameter must be a number between Min_Data = 0 and Max_Data = 1    */
-  
-  uint16_t  tx_fifo_num;    /*!< Transmission FIFO number
-                                 This parameter must be a number between Min_Data = 1 and Max_Data = 15   */
-  
-  uint32_t  maxpacket;      /*!< Endpoint Max packet size
-                                 This parameter must be a number between Min_Data = 0 and Max_Data = 64KB */
-  
-  uint8_t   *xfer_buff;     /*!< Pointer to transfer buffer                                               */
-  
-  uint32_t  dma_addr;       /*!< 32 bits aligned transfer buffer address                                  */
-  
-  uint32_t  xfer_len;       /*!< Current transfer length                                                  */
-  
-  uint32_t  xfer_count;     /*!< Partial transfer length in case of multi packet transfer                 */
-}USB_OTG_EPTypeDef;
+typedef struct {
+	uint8_t   num;            // Endpoint number
+	bool      is_in;          // Endpoint direction
+	bool      is_stall;       // Endpoint stall condition
+	uint8_t   type;           // Endpoint type
+	uint8_t   data_pid_start; // Initial data PID
+	uint8_t   even_odd_frame; // IFrame parity
+	uint16_t  tx_fifo_num;    // Transmission FIFO number
+	uint32_t  maxpacket;      // Endpoint Max packet size
+	uint8_t   *xfer_buff;     // Pointer to transfer buffer
+	uint32_t  dma_addr;       // 32 bits aligned transfer buffer address
+	uint32_t  xfer_len;       // Current transfer length
+	uint32_t  xfer_count;     // Partial transfer length in case of multi packet transfer
+} USB_OTG_EPTypeDef;
 
 typedef struct
 {

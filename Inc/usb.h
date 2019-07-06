@@ -39,7 +39,7 @@ public:
 private:
 
 	void start();
-	void stall(uint8_t endpoint);
+	void setStall(uint8_t endpoint);
 
 	void onConnect();
 	void onDisconnect();
@@ -64,8 +64,15 @@ private:
 	void onClearFeature();
 
 	inline void controllError() {
-		stall(0x80);
-		stall(0x00);
+		setStall(0x80);
+		setStall(0x00);
+	}
+
+	inline void endpoint0OutStart() {
+		outEndpoint(0)->DOEPTSIZ  = 0;
+		outEndpoint(0)->DOEPTSIZ |= (1 << USB_OTG_DOEPTSIZ_PKTCNT_Pos) & USB_OTG_DOEPTSIZ_PKTCNT;
+		outEndpoint(0)->DOEPTSIZ |= (3 * 8);
+		outEndpoint(0)->DOEPTSIZ |= USB_OTG_DOEPTSIZ_STUPCNT;
 	}
 
 	inline void enableGlobalInterrupt() {
