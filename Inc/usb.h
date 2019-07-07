@@ -40,12 +40,15 @@ public:
 
 private:
 
+	void getUnicodeString(const uint8_t * ascii, uint8_t *unicode, uint16_t *length);
+	void getUnicodeString(uint32_t value, uint8_t *unicode, uint8_t length);
+	void getSerialNumber(uint8_t *unicode);
+
 	void start();
 	void setStall(uint8_t endpoint);
 	void endpointTransmit(uint8_t ep_addr, uint8_t *pBuf, uint32_t len);
 	void startEndpoint0Xfer(USB_OTG_EPTypeDef *ep);
 	void startEndpointXfer(USB_OTG_EPTypeDef *ep);
-
 
 	void onConnect();
 	void onDisconnect();
@@ -168,6 +171,7 @@ private:
 			USB_OTG_FS_PERIPH_BASE + USB_OTG_FIFO_BASE + USB_OTG_FIFO_SIZE * index
 		);
 	}
+
 };
 
 extern USB_Class USB;

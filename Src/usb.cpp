@@ -2,22 +2,199 @@
 #include "usb.h"
 
 #include "usbd_core.h"
-#include "usbd_desc.h"
 #include "usbd_cdc.h"
 #include "usbd_cdc_if.h"
 #include "usbd_ctlreq.h"
 #include "usbd_ioreq.h"
 
+#define UID ((uint32_t *) UID_BASE)
+#define USB_SIZ_STRING_SERIAL       0x1A
+
+#define USBD_VID                      1155
+#define USBD_LANGID_STRING            1033
+#define USBD_MANUFACTURER_STRING      "STMicroelectronics"
+#define USBD_PID_FS                   22336
+#define USBD_PRODUCT_STRING_FS        "STM32 Virtual ComPort"
+#define USBD_CONFIGURATION_STRING_FS  "CDC Config"
+#define USBD_INTERFACE_STRING_FS      "CDC Interface"
+
+const uint8_t ManifacturerString[]  = "STMicroelectronics";
+const uint8_t ProductString[]       = "STM32 Virtual ComPort";
+const uint8_t ConfigurationString[] = "CDC Config";
+const uint8_t InterfaceString[]     = "CDC Interface";
+
+// USB standard device descriptor.
+__attribute__ ((aligned (4)))
+const uint8_t DeviceDescriptor[] = {
+	0x12,                       /*bLength */
+	USB_DESC_TYPE_DEVICE,       /*bDescriptorType*/
+	0x00,                       /*bcdUSB */
+	0x02,
+	0x02,                       /*bDeviceClass*/
+	0x02,                       /*bDeviceSubClass*/
+	0x00,                       /*bDeviceProtocol*/
+	USB_MAX_EP0_SIZE,           /*bMaxPacketSize*/
+	LOBYTE(USBD_VID),           /*idVendor*/
+	HIBYTE(USBD_VID),           /*idVendor*/
+	LOBYTE(USBD_PID_FS),        /*idProduct*/
+	HIBYTE(USBD_PID_FS),        /*idProduct*/
+	0x00,                       /*bcdDevice rel. 2.00*/
+	0x02,
+	USBD_IDX_MFC_STR,           /*Index of manufacturer  string*/
+	USBD_IDX_PRODUCT_STR,       /*Index of product string*/
+	USBD_IDX_SERIAL_STR,        /*Index of serial number string*/
+	USBD_MAX_NUM_CONFIGURATION  /*bNumConfigurations*/
+};
+
+// USB lang indentifier descriptor.
+__attribute__ ((aligned (4)))
+const uint8_t LangIDDescriptor[] = {
+	USB_LEN_LANGID_STR_DESC,
+	USB_DESC_TYPE_STRING,
+	LOBYTE(USBD_LANGID_STRING),
+	HIBYTE(USBD_LANGID_STRING)
+};
+
+// USB CDC device Configuration Descriptor
+__attribute__ ((aligned (4)))
+const uint8_t ClassConfigurationDescriptor[] = {
+	/*Configuration Descriptor*/
+	0x09,   /* bLength: Configuration Descriptor size */
+	USB_DESC_TYPE_CONFIGURATION,      /* bDescriptorType: Configuration */
+	USB_CDC_CONFIG_DESC_SIZ,                /* wTotalLength:no of returned bytes */
+	0x00,
+	0x02,   /* bNumInterfaces: 2 interface */
+	0x01,   /* bConfigurationValue: Configuration value */
+	0x00,   /* iConfiguration: Index of string descriptor describing the configuration */
+	0xC0,   /* bmAttributes: self powered */
+	0x32,   /* MaxPower 0 mA */
+
+	/*---------------------------------------------------------------------------*/
+
+	/*Interface Descriptor */
+	0x09,   /* bLength: Interface Descriptor size */
+	USB_DESC_TYPE_INTERFACE,  /* bDescriptorType: Interface */
+	/* Interface descriptor type */
+	0x00,   /* bInterfaceNumber: Number of Interface */
+	0x00,   /* bAlternateSetting: Alternate setting */
+	0x01,   /* bNumEndpoints: One endpoints used */
+	0x02,   /* bInterfaceClass: Communication Interface Class */
+	0x02,   /* bInterfaceSubClass: Abstract Control Model */
+	0x01,   /* bInterfaceProtocol: Common AT commands */
+	0x00,   /* iInterface: */
+
+	/*Header Functional Descriptor*/
+	0x05,   /* bLength: Endpoint Descriptor size */
+	0x24,   /* bDescriptorType: CS_INTERFACE */
+	0x00,   /* bDescriptorSubtype: Header Func Desc */
+	0x10,   /* bcdCDC: spec release number */
+	0x01,
+
+	/*Call Management Functional Descriptor*/
+	0x05,   /* bFunctionLength */
+	0x24,   /* bDescriptorType: CS_INTERFACE */
+	0x01,   /* bDescriptorSubtype: Call Management Func Desc */
+	0x00,   /* bmCapabilities: D0+D1 */
+	0x01,   /* bDataInterface: 1 */
+
+	/*ACM Functional Descriptor*/
+	0x04,   /* bFunctionLength */
+	0x24,   /* bDescriptorType: CS_INTERFACE */
+	0x02,   /* bDescriptorSubtype: Abstract Control Management desc */
+	0x02,   /* bmCapabilities */
+
+	/*Union Functional Descriptor*/
+	0x05,   /* bFunctionLength */
+	0x24,   /* bDescriptorType: CS_INTERFACE */
+	0x06,   /* bDescriptorSubtype: Union func desc */
+	0x00,   /* bMasterInterface: Communication class interface */
+	0x01,   /* bSlaveInterface0: Data Class Interface */
+
+	/*Endpoint 2 Descriptor*/
+	0x07,                           /* bLength: Endpoint Descriptor size */
+	USB_DESC_TYPE_ENDPOINT,   /* bDescriptorType: Endpoint */
+	CDC_CMD_EP,                     /* bEndpointAddress */
+	0x03,                           /* bmAttributes: Interrupt */
+	LOBYTE(CDC_CMD_PACKET_SIZE),     /* wMaxPacketSize: */
+	HIBYTE(CDC_CMD_PACKET_SIZE),
+	0x10,                           /* bInterval: */
+	/*---------------------------------------------------------------------------*/
+
+	/*Data class interface descriptor*/
+	0x09,   /* bLength: Endpoint Descriptor size */
+	USB_DESC_TYPE_INTERFACE,  /* bDescriptorType: */
+	0x01,   /* bInterfaceNumber: Number of Interface */
+	0x00,   /* bAlternateSetting: Alternate setting */
+	0x02,   /* bNumEndpoints: Two endpoints used */
+	0x0A,   /* bInterfaceClass: CDC */
+	0x00,   /* bInterfaceSubClass: */
+	0x00,   /* bInterfaceProtocol: */
+	0x00,   /* iInterface: */
+
+	/*Endpoint OUT Descriptor*/
+	0x07,   /* bLength: Endpoint Descriptor size */
+	USB_DESC_TYPE_ENDPOINT,      /* bDescriptorType: Endpoint */
+	CDC_OUT_EP,                        /* bEndpointAddress */
+	0x02,                              /* bmAttributes: Bulk */
+	LOBYTE(CDC_DATA_HS_MAX_PACKET_SIZE),  /* wMaxPacketSize: */
+	HIBYTE(CDC_DATA_HS_MAX_PACKET_SIZE),
+	0x00,                              /* bInterval: ignore for Bulk transfer */
+
+	/*Endpoint IN Descriptor*/
+	0x07,   /* bLength: Endpoint Descriptor size */
+	USB_DESC_TYPE_ENDPOINT,      /* bDescriptorType: Endpoint */
+	CDC_IN_EP,                         /* bEndpointAddress */
+	0x02,                              /* bmAttributes: Bulk */
+	LOBYTE(CDC_DATA_HS_MAX_PACKET_SIZE),  /* wMaxPacketSize: */
+	HIBYTE(CDC_DATA_HS_MAX_PACKET_SIZE),
+0x00                               /* bInterval: ignore for Bulk transfer */
+};
 
 USBD_HandleTypeDef hUsbDeviceFS;
 
 USB_Class::USB_Class() {
 	;
 }
+void USB_Class::getUnicodeString(const uint8_t *ascii, uint8_t *unicode, uint16_t *length) {
+	uint8_t idx = 1;
+
+	if (ascii != nullptr) {
+		unicode[idx++] = USB_DESC_TYPE_STRING;
+
+		while (*ascii != '\0') {
+			unicode[idx++] = *ascii++;
+			unicode[idx++] = 0;
+			*length += 2;
+		}
+
+		unicode[0] = *length + 2;
+	}
+}
+
+void USB_Class::getUnicodeString(uint32_t value, uint8_t *unicode, uint8_t length) {
+	uint8_t idx = 0;
+
+	for (idx = 0; idx < length; idx++) {
+
+		if (((value >> 28)) < 0xA) {
+			unicode[2 * idx] = (value >> 28) + '0';
+		} else {
+			unicode[2 * idx] = (value >> 28) + 'A' - 10;
+		}
+
+		value = value << 4;
+		unicode[2 * idx + 1] = 0;
+	}
+}
+
+void USB_Class::getSerialNumber(uint8_t *unicode) {
+	getUnicodeString(UID[0] + UID[2], unicode, 8);
+	getUnicodeString(UID[1]         , unicode, 4);
+}
 
 void USB_Class::init() {
 	/* Init Device Library, add supported class and start the library. */
-	if (USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS) != UsbStatus::USBD_OK) Error_Handler();
+	if (USBD_Init(&hUsbDeviceFS, nullptr, DEVICE_FS) != UsbStatus::USBD_OK) Error_Handler();
 	if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != UsbStatus::USBD_OK) Error_Handler();
 	if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != UsbStatus::USBD_OK) Error_Handler();
 	start();
@@ -157,27 +334,26 @@ void USB_Class::startEndpointXfer(USB_OTG_EPTypeDef *ep) {
 		 * pktcnt = N
 		 * xfersize = N * maxpacket
 		 */
-		outEndpoint(ep->num)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_XFRSIZ);
-		outEndpoint(ep->num)->DOEPTSIZ &= ~(USB_OTG_DOEPTSIZ_PKTCNT);
+
+		CLEAR_BIT(outEndpoint(ep->num)->DOEPTSIZ, USB_OTG_DOEPTSIZ_XFRSIZ | USB_OTG_DOEPTSIZ_PKTCNT);
 
 		if (ep->xfer_len == 0) {
-			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & ep->maxpacket);
-			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (1 << 19));
+			SET_BIT(outEndpoint(ep->num)->DOEPTSIZ, (USB_OTG_DOEPTSIZ_XFRSIZ & ep->maxpacket) | (USB_OTG_DOEPTSIZ_PKTCNT & (1 << USB_OTG_DOEPTSIZ_PKTCNT_Pos)));
 		} else {
-			pktcnt = (ep->xfer_len + ep->maxpacket -1)/ ep->maxpacket;
-			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_PKTCNT & (pktcnt << 19));
-			outEndpoint(ep->num)->DOEPTSIZ |= (USB_OTG_DOEPTSIZ_XFRSIZ & (ep->maxpacket * pktcnt));
+			pktcnt = (ep->xfer_len + ep->maxpacket -1) / ep->maxpacket;
+			SET_BIT(outEndpoint(ep->num)->DOEPTSIZ, (USB_OTG_DOEPTSIZ_XFRSIZ & (ep->maxpacket * pktcnt)) | (USB_OTG_DOEPTSIZ_PKTCNT & (pktcnt << USB_OTG_DOEPTSIZ_PKTCNT_Pos)));
 		}
 
 		if (ep->type == EP_TYPE_ISOC) {
-			if ((device()->DSTS & ( 1 << 8 )) == 0) {
-				outEndpoint(ep->num)->DOEPCTL |= USB_OTG_DOEPCTL_SODDFRM;
+			if ((device()->DSTS & ( 1 << USB_OTG_DSTS_FNSOF_Pos)) == 0) {
+				SET_BIT(outEndpoint(ep->num)->DOEPCTL, USB_OTG_DOEPCTL_SODDFRM);
 			} else {
-				outEndpoint(ep->num)->DOEPCTL |= USB_OTG_DOEPCTL_SD0PID_SEVNFRM;
+				SET_BIT(outEndpoint(ep->num)->DOEPCTL, USB_OTG_DOEPCTL_SD0PID_SEVNFRM);
 			}
 		}
-		/* EP enable */
-		outEndpoint(ep->num)->DOEPCTL |= (USB_OTG_DOEPCTL_CNAK | USB_OTG_DOEPCTL_EPENA);
+
+		// EP enable
+		SET_BIT(outEndpoint(ep->num)->DOEPCTL, USB_OTG_DOEPCTL_CNAK | USB_OTG_DOEPCTL_EPENA);
 	}
 }
 
@@ -584,95 +760,83 @@ void USB_Class::onGetDescriptor() {
 	PCD_HandleTypeDef *hpcd = &hpcd_USB_OTG_FS;
 	USBD_HandleTypeDef *pdev = (USBD_HandleTypeDef*) hpcd->pData;
 
-	uint16_t len;
-	uint8_t *pbuf;
+	uint8_t buffer[USBD_MAX_STR_DESC_SIZ];
+	uint8_t *pBuffer = buffer;
+	uint16_t length = 0;
 
 	switch (pdev->request.wValue >> 8) {
-#if (USBD_LPM_ENABLED == 1)
-	case USB_DESC_TYPE_BOS:
-		pbuf = pdev->pDesc->GetBOSDescriptor(pdev->dev_speed, &len);
-		break;
-#endif
 	case USB_DESC_TYPE_DEVICE:
-		pbuf = pdev->pDesc->GetDeviceDescriptor(pdev->dev_speed, &len);
+		length  = sizeof(DeviceDescriptor);
+		pBuffer = const_cast<uint8_t*>(DeviceDescriptor);
 		break;
 
 	case USB_DESC_TYPE_CONFIGURATION:
-		if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH ) {
-			pbuf   = (uint8_t *)pdev->pClass->GetHSConfigDescriptor(&len);
-			pbuf[1] = USB_DESC_TYPE_CONFIGURATION;
-		} else {
-			pbuf   = (uint8_t *)pdev->pClass->GetFSConfigDescriptor(&len);
-			pbuf[1] = USB_DESC_TYPE_CONFIGURATION;
-		}
+		length  = sizeof(ClassConfigurationDescriptor);
+		pBuffer = const_cast<uint8_t*>(ClassConfigurationDescriptor);
 		break;
 
 	case USB_DESC_TYPE_STRING:
 		switch ((uint8_t)(pdev->request.wValue)) {
 		case USBD_IDX_LANGID_STR:
-			pbuf = pdev->pDesc->GetLangIDStrDescriptor(pdev->dev_speed, &len);
+			length  = sizeof(LangIDDescriptor);
+			pBuffer = const_cast<uint8_t*>(LangIDDescriptor);
 			break;
 
 		case USBD_IDX_MFC_STR:
-			pbuf = pdev->pDesc->GetManufacturerStrDescriptor(pdev->dev_speed, &len);
+			getUnicodeString(ManifacturerString, pBuffer, &length);
 			break;
 
 		case USBD_IDX_PRODUCT_STR:
-			pbuf = pdev->pDesc->GetProductStrDescriptor(pdev->dev_speed, &len);
+			getUnicodeString(ProductString, pBuffer, &length);
 			break;
 
 		case USBD_IDX_SERIAL_STR:
-			pbuf = pdev->pDesc->GetSerialStrDescriptor(pdev->dev_speed, &len);
+			length = USB_SIZ_STRING_SERIAL;
+			getSerialNumber(buffer);
 			break;
 
 		case USBD_IDX_CONFIG_STR:
-			pbuf = pdev->pDesc->GetConfigurationStrDescriptor(pdev->dev_speed, &len);
+			getUnicodeString(ConfigurationString, pBuffer, &length);
 			break;
 
 		case USBD_IDX_INTERFACE_STR:
-			pbuf = pdev->pDesc->GetInterfaceStrDescriptor(pdev->dev_speed, &len);
+			getUnicodeString(InterfaceString, pBuffer, &length);
 			break;
-
-		default:
-#if (USBD_SUPPORT_USER_STRING == 1)
-	pbuf = pdev->pClass->GetUsrStrDescriptor(pdev, (req->wValue) , &len);
-	break;
-#else
-	controllError();
-	return;
-#endif
-		}
-		break;
-		case USB_DESC_TYPE_DEVICE_QUALIFIER:
-
-			if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH  ) {
-				pbuf   = (uint8_t *)pdev->pClass->GetDeviceQualifierDescriptor(&len);
-				break;
-			} else {
-				controllError();
-				return;
-			}
-
-		case USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION:
-			if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH  ) {
-				pbuf   = (uint8_t *)pdev->pClass->GetOtherSpeedConfigDescriptor(&len);
-				pbuf[1] = USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION;
-				break;
-			} else {
-				controllError();
-				return;
-			}
 
 		default:
 			controllError();
 			return;
+		}
+		break;
+
+	case USB_DESC_TYPE_DEVICE_QUALIFIER:
+		if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH  ) {
+			pBuffer   = (uint8_t *)pdev->pClass->GetDeviceQualifierDescriptor(&length);
+			break;
+		} else {
+			controllError();
+			return;
+		}
+
+	case USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION:
+		if (pdev->dev_speed == UsbSpeed::USBD_SPEED_HIGH  ) {
+			pBuffer   = (uint8_t *)pdev->pClass->GetOtherSpeedConfigDescriptor(&length);
+			pBuffer[1] = USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION;
+			break;
+		} else {
+			controllError();
+			return;
+		}
+
+	default:
+		controllError();
+		return;
 	}
 
-	if ((len != 0)&& (pdev->request.wLength != 0)) {
-		len = MIN(len , pdev->request.wLength);
-		USBD_CtlSendData (pdev, pbuf, len);
+	if ((length != 0) && (pdev->request.wLength != 0)) {
+		length = MIN(length , pdev->request.wLength);
+		USBD_CtlSendData(pdev, pBuffer, length);
 	}
-
 }
 
 void USB_Class::onSetAddress() {
@@ -788,11 +952,7 @@ void USB_Class::onGetStatus() {
 	case USBD_STATE_ADDRESSED:
 	case USBD_STATE_CONFIGURED:
 
-#if ( USBD_SELF_POWERED == 1)
 		pdev->dev_config_status = USB_CONFIG_SELF_POWERED;
-#else
-		pdev->dev_config_status = 0;
-#endif
 
 		if (pdev->dev_remote_wakeup) {
 			pdev->dev_config_status |= USB_CONFIG_REMOTE_WAKEUP;
@@ -813,7 +973,7 @@ void USB_Class::onSetFeature() {
 
 	if (pdev->request.wValue == USB_FEATURE_REMOTE_WAKEUP) {
 		pdev->dev_remote_wakeup = 1;
-		pdev->pClass->Setup (pdev, &pdev->request);
+		pdev->pClass->Setup(pdev, &pdev->request);
 		sendControlStatus();
 	}
 }
@@ -827,7 +987,7 @@ void USB_Class::onClearFeature() {
 	case USBD_STATE_CONFIGURED:
 		if (pdev->request.wValue == USB_FEATURE_REMOTE_WAKEUP) {
 			pdev->dev_remote_wakeup = 0;
-			pdev->pClass->Setup (pdev, &pdev->request);
+			pdev->pClass->Setup(pdev, &pdev->request);
 			sendControlStatus();
 		}
 		break;

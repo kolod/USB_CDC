@@ -127,8 +127,8 @@
 							<tool id="com.atollic.truestudio.ar.base.1419579851" name="Archiver" superClass="com.atollic.truestudio.ar.base"/>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.atollic.truestudio.exe.debug.1518366166.1645122274" name="usb_device.cpp" rcbsApplicability="disable" resourcePath="Src/usb_device.cpp" toolsToInvoke="com.atollic.truestudio.exe.debug.toolchain.gpp.981298185.649936605">
-						<tool id="com.atollic.truestudio.exe.debug.toolchain.gpp.981298185.649936605" name="C++ Compiler" superClass="com.atollic.truestudio.exe.debug.toolchain.gpp.981298185"/>
+					<fileInfo id="com.atollic.truestudio.exe.debug.1518366166.1516531354" name="usbd_desc.cpp" rcbsApplicability="disable" resourcePath="Src/usbd_desc.cpp" toolsToInvoke="com.atollic.truestudio.exe.debug.toolchain.gpp.981298185.461060759">
+						<tool id="com.atollic.truestudio.exe.debug.toolchain.gpp.981298185.461060759" name="C++ Compiler" superClass="com.atollic.truestudio.exe.debug.toolchain.gpp.981298185"/>
 					</fileInfo>
 					<fileInfo id="com.atollic.truestudio.exe.debug.311825581.983937533" name="" rcbsApplicability="disable" resourcePath="nofile" toolsToInvoke="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447.1976695455">
 						<tool id="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447.1976695455" name="C Compiler" superClass="com.atollic.truestudio.exe.debug.toolchain.gcc.1836874447">
@@ -139,8 +139,7 @@
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
-						<entry excluding="usb_device.cpp|system_stm32f1xx.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
-						<entry excluding="startup_stm32f105xc.s" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="startup"/>
+						<entry excluding="usbd_desc.cpp|usb_device.cpp|system_stm32f1xx.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -273,8 +272,8 @@
 							<tool id="com.atollic.truestudio.ar.base.780487884" name="Archiver" superClass="com.atollic.truestudio.ar.base"/>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.atollic.truestudio.exe.release.1518366166.1615864955" name="usb_device.cpp" rcbsApplicability="disable" resourcePath="Src/usb_device.cpp" toolsToInvoke="com.atollic.truestudio.exe.release.toolchain.gpp.981298185.157096426">
-						<tool id="com.atollic.truestudio.exe.release.toolchain.gpp.981298185.157096426" name="C++ Compiler" superClass="com.atollic.truestudio.exe.release.toolchain.gpp.981298185"/>
+					<fileInfo id="com.atollic.truestudio.exe.release.1518366166.2086392625" name="usbd_desc.cpp" rcbsApplicability="disable" resourcePath="Src/usbd_desc.cpp" toolsToInvoke="com.atollic.truestudio.exe.release.toolchain.gpp.981298185.1074023958">
+						<tool id="com.atollic.truestudio.exe.release.toolchain.gpp.981298185.1074023958" name="C++ Compiler" superClass="com.atollic.truestudio.exe.release.toolchain.gpp.981298185"/>
 					</fileInfo>
 					<fileInfo id="com.atollic.truestudio.exe.release.311825581.983937533" name="" rcbsApplicability="disable" resourcePath="nofile" toolsToInvoke="com.atollic.truestudio.exe.release.toolchain.gcc.1836874447.1976695455">
 						<tool id="com.atollic.truestudio.exe.release.toolchain.gcc.1836874447.1976695455" name="C Compiler" superClass="com.atollic.truestudio.exe.release.toolchain.gcc.1836874447">
@@ -285,8 +284,7 @@
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
-						<entry excluding="usb_device.cpp|system_stm32f1xx.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
-						<entry excluding="startup_stm32f105xc.s" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="startup"/>
+						<entry excluding="usbd_desc.cpp|usb_device.cpp|system_stm32f1xx.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
