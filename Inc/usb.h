@@ -50,6 +50,7 @@ private:
 	void startEndpoint0Xfer(USB_OTG_EPTypeDef *ep);
 	void startEndpointXfer(USB_OTG_EPTypeDef *ep);
 
+
 	void onConnect();
 	void onDisconnect();
 	void onIsoOutIncomlete();
@@ -71,6 +72,8 @@ private:
 	void onGetStatus();
 	void onSetFeature();
 	void onClearFeature();
+
+	void onDataInStage(uint8_t epnum, uint8_t *pdata);
 
 	inline void controllError() {
 		setStall(0x80);

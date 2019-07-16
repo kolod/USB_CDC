@@ -7,16 +7,12 @@
 #include "usbd_ctlreq.h"
 #include "usbd_ioreq.h"
 
-#define UID ((uint32_t *) UID_BASE)
-#define USB_SIZ_STRING_SERIAL       0x1A
+#define UID ((uint32_t *)             UID_BASE)
+#define USB_SIZ_STRING_SERIAL         0x1A
 
 #define USBD_VID                      1155
 #define USBD_LANGID_STRING            1033
-#define USBD_MANUFACTURER_STRING      "STMicroelectronics"
 #define USBD_PID_FS                   22336
-#define USBD_PRODUCT_STRING_FS        "STM32 Virtual ComPort"
-#define USBD_CONFIGURATION_STRING_FS  "CDC Config"
-#define USBD_INTERFACE_STRING_FS      "CDC Interface"
 
 const uint8_t ManifacturerString[]  = "STMicroelectronics";
 const uint8_t ProductString[]       = "STM32 Virtual ComPort";
@@ -189,12 +185,19 @@ void USB_Class::getUnicodeString(uint32_t value, uint8_t *unicode, uint8_t lengt
 
 void USB_Class::getSerialNumber(uint8_t *unicode) {
 	getUnicodeString(UID[0] + UID[2], unicode, 8);
-	getUnicodeString(UID[1]         , unicode, 4);
+	getUnicodeString(UID[1], unicode + 8, 4);
 }
 
 void USB_Class::init() {
-	/* Init Device Library, add supported class and start the library. */
-	if (USBD_Init(&hUsbDeviceFS, nullptr, DEVICE_FS) != UsbStatus::USBD_OK) Error_Handler();
+	hUsbDeviceFS.pClass     = nullptr;
+	hUsbDeviceFS.dev_state  = USBD_STATE_DEFAULT;
+	hUsbDeviceFS.id         = DEVICE_FS;
+
+	// Initialize low level driver
+	USBD_LL_Init(&hUsbDeviceFS);
+
+
+
 	if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != UsbStatus::USBD_OK) Error_Handler();
 	if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != UsbStatus::USBD_OK) Error_Handler();
 	start();
@@ -395,22 +398,14 @@ void USB_Class::writePacket(uint8_t *source, uint32_t epnum, size_t length) {
 }
 
 HAL_StatusTypeDef USB_Class::writeEmptyTxFifo(PCD_HandleTypeDef *hpcd, uint32_t epnum) {
-
-	USB_OTG_EPTypeDef *ep = NULL;
-	size_t   len = 0;
-	uint32_t len32b = 0U;
-	uint32_t fifoemptymsk = 0U;
-
-	ep = &hpcd->IN_ep[epnum];
-	len = ep->xfer_len - ep->xfer_count;
+	USB_OTG_EPTypeDef *ep = &hpcd->IN_ep[epnum];
+	uint32_t len = ep->xfer_len - ep->xfer_count;
 
 	if (len > ep->maxpacket) len = ep->maxpacket;
-	len32b = (len + 3U) / 4U;
+	uint32_t len32b = (len + 3U) / 4U;
 
 	while ((inEndpoint(epnum)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) > len32b &&
-			ep->xfer_count < ep->xfer_len &&
-			ep->xfer_len != 0U)
-	{
+	ep->xfer_count < ep->xfer_len && ep->xfer_len != 0U) {
 		/* Write the FIFO */
 		len = ep->xfer_len - ep->xfer_count;
 
@@ -424,7 +419,7 @@ HAL_StatusTypeDef USB_Class::writeEmptyTxFifo(PCD_HandleTypeDef *hpcd, uint32_t 
 	}
 
 	if (len <= 0) {
-		fifoemptymsk = 0x01U << epnum;
+		uint32_t fifoemptymsk = 0x01U << epnum;
 		device()->DIEPEMPMSK &= ~fifoemptymsk;
 	}
 
@@ -612,22 +607,21 @@ void USB_Class::onResume() {
 }
 
 void USB_Class::onIn() {
-	uint32_t epnum = 0;
-	uint32_t fifoemptymsk = 0;
 
 	// Read in the device interrupt bits
 	uint32_t ep_intr = ReadDevAllInEpInterrupt();
 
+	uint32_t epnum = 0;
 	while (ep_intr) {
 		if (ep_intr & 1) {
 
 			uint32_t epint = ReadDevInEPInterrupt(epnum);
 
 			if ((epint & USB_OTG_DIEPINT_XFRC) == USB_OTG_DIEPINT_XFRC) {
-				fifoemptymsk = 0x1U << epnum;
+				uint32_t fifoemptymsk = 0x1U << epnum;
 				device()->DIEPEMPMSK &= ~fifoemptymsk;
 				clearInEndpointInterrupt(epnum, USB_OTG_DIEPINT_XFRC);
-				HAL_PCD_DataInStageCallback(&hpcd_USB_OTG_FS, epnum);
+				onDataInStage(epnum, hpcd_USB_OTG_FS.IN_ep[epnum].xfer_buff);
 			}
 
 			if ((epint & USB_OTG_DIEPINT_TOC) == USB_OTG_DIEPINT_TOC)
@@ -651,29 +645,69 @@ void USB_Class::onIn() {
 	}
 }
 
+void USB_Class::onDataInStage(uint8_t epnum, uint8_t *pdata) {
+	USBD_HandleTypeDef *pdev = reinterpret_cast<USBD_HandleTypeDef*>(hpcd_USB_OTG_FS.pData);
+
+	if (epnum == 0)  {
+		USBD_EndpointTypeDef *pep = &pdev->ep_in[0];
+
+		if (pdev->ep0_state == USBD_EP0_DATA_IN) {
+			if(pep->rem_length > pep->maxpacket) {
+				pep->rem_length -=  pep->maxpacket;
+
+				USBD_CtlContinueSendData(pdev, pdata, pep->rem_length);
+
+				/* Prepare endpoint for premature end of transfer */
+				USBD_LL_PrepareReceive(pdev, 0, NULL, 0);
+			} else { /* last packet is MPS multiple, so send ZLP packet */
+				if ((pep->total_length % pep->maxpacket == 0) &&
+						(pep->total_length >= pep->maxpacket) &&
+						(pep->total_length < pdev->ep0_data_len )) {
+
+					USBD_CtlContinueSendData(pdev , NULL, 0);
+					pdev->ep0_data_len = 0;
+
+					/* Prepare endpoint for premature end of transfer */
+					USBD_LL_PrepareReceive(pdev, 0, NULL, 0);
+				} else {
+					if ((pdev->pClass->EP0_TxSent != NULL) && (pdev->dev_state == USBD_STATE_CONFIGURED)) {
+						pdev->pClass->EP0_TxSent(pdev);
+					}
+					USBD_CtlReceiveStatus(pdev);
+				}
+			}
+		} if (pdev->dev_test_mode == 1) {
+			USBD_RunTestMode(pdev);
+			pdev->dev_test_mode = 0;
+		}
+	} else if ((pdev->pClass->DataIn != NULL) && (pdev->dev_state == USBD_STATE_CONFIGURED)) {
+		pdev->pClass->DataIn(pdev, epnum);
+	}
+}
+
 void USB_Class::onOut() {
-	uint32_t epnum = 0U;
 
 	// Read in the device interrupt bits
 	uint32_t ep_intr = ReadDevAllOutEpInterrupt();
 
+	uint32_t epnum = 0;
 	while (ep_intr) {
 		if (ep_intr & 1) {
 
 			uint32_t epint = ReadDevOutEPInterrupt(epnum);
 
-			if (( epint & USB_OTG_DOEPINT_XFRC) == USB_OTG_DOEPINT_XFRC) {
+			if ((epint & USB_OTG_DOEPINT_XFRC) == USB_OTG_DOEPINT_XFRC) {
 				clearOutEndpointInterrupt(epnum, USB_OTG_DOEPINT_XFRC);
 				HAL_PCD_DataOutStageCallback(&hpcd_USB_OTG_FS, epnum);
 			}
 
-			if (( epint & USB_OTG_DOEPINT_STUP) == USB_OTG_DOEPINT_STUP) {
+			if ((epint & USB_OTG_DOEPINT_STUP) == USB_OTG_DOEPINT_STUP) {
 				/* Inform the upper layer that a setup packet is available */
 				onSetupStage();
 				clearOutEndpointInterrupt(epnum, USB_OTG_DOEPINT_STUP);
 			}
 
-			if (( epint & USB_OTG_DOEPINT_OTEPDIS) == USB_OTG_DOEPINT_OTEPDIS) {
+			if ((epint & USB_OTG_DOEPINT_OTEPDIS) == USB_OTG_DOEPINT_OTEPDIS) {
 				clearOutEndpointInterrupt(epnum, USB_OTG_DOEPINT_OTEPDIS);
 			}
 		}
@@ -894,12 +928,12 @@ void USB_Class::onSetConfig() {
 			if (cfgidx == 0) {
 				pdev->dev_state = USBD_STATE_ADDRESSED;
 				pdev->dev_config = cfgidx;
-				USBD_ClrClassConfig(pdev , cfgidx);
+				pdev->pClass->DeInit(pdev, cfgidx);
 				sendControlStatus();
 
 			} else  if (cfgidx != pdev->dev_config) {
 				/* Clear old configuration */
-				USBD_ClrClassConfig(pdev , pdev->dev_config);
+				pdev->pClass->DeInit(pdev, pdev->dev_config);
 
 				/* set new configuration */
 				pdev->dev_config = cfgidx;

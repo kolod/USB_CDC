@@ -34,14 +34,15 @@ void HAL_PCD_MspDeInit(PCD_HandleTypeDef* pcdHandle) {
   * @param  hpcd: PCD handle
   * @retval None
   */
-#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)
-static void PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
-#else
-void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
-#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
-{
-	USBD_LL_SetupStage((USBD_HandleTypeDef*)hpcd->pData, (uint8_t *)hpcd->Setup);
-}
+
+//#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)
+//static void PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
+//#else
+//void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
+//#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
+//{
+//	USBD_LL_SetupStage((USBD_HandleTypeDef*)hpcd->pData, (uint8_t *)hpcd->Setup);
+//}
 
 /**
   * @brief  Data Out stage callback.
@@ -108,7 +109,7 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 		Error_Handler();
 	}
 	/* Set Speed. */
-	USBD_LL_SetSpeed((USBD_HandleTypeDef*)hpcd->pData, speed);
+	((USBD_HandleTypeDef*)hpcd->pData)->dev_speed = speed;
 
 	/* Reset Device. */
 	USBD_LL_Reset((USBD_HandleTypeDef*)hpcd->pData);

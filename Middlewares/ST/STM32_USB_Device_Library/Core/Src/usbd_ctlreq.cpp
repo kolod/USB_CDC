@@ -2,15 +2,16 @@
 #include "usbd_ctlreq.h"
 #include "usbd_ioreq.h"
 
-static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_SetAddress(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_GetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_ClrFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static uint8_t USBD_GetLen(uint8_t *buf);
+//static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+//static void USBD_SetAddress(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+//static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+//static void USBD_GetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+//static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+//static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+//static void USBD_ClrFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+//static uint8_t USBD_GetLen(uint8_t *buf);
 
+/*
 UsbStatus  USBD_StdDevReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	UsbStatus ret = UsbStatus::USBD_OK;
 
@@ -50,6 +51,7 @@ UsbStatus  USBD_StdDevReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 
 	return ret;
 }
+*/
 
 /**
 * @brief  USBD_StdItfReq
@@ -183,6 +185,8 @@ UsbStatus  USBD_StdEPReq (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 * @param  req: usb request
 * @retval status
 */
+
+/*
 static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	uint16_t len;
 	uint8_t *pbuf;
@@ -274,6 +278,7 @@ static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *r
 	}
 
 }
+*/
 
 /**
 * @brief  USBD_SetAddress
@@ -282,6 +287,7 @@ static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *r
 * @param  req: usb request
 * @retval status
 */
+/*
 static void USBD_SetAddress(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	uint8_t  dev_addr;
 
@@ -305,7 +311,7 @@ static void USBD_SetAddress(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 		USBD_CtlError(pdev , req);
 	}
 }
-
+*/
 /**
 * @brief  USBD_SetConfig
 *         Handle Set device configuration request
@@ -313,6 +319,7 @@ static void USBD_SetAddress(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 * @param  req: usb request
 * @retval status
 */
+/*
 static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 
 	static uint8_t  cfgidx;
@@ -345,10 +352,10 @@ static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 				USBD_CtlSendStatus(pdev);
 
 			} else  if (cfgidx != pdev->dev_config) {
-				/* Clear old configuration */
+				/// Clear old configuration
 				USBD_ClrClassConfig(pdev , pdev->dev_config);
 
-				/* set new configuration */
+				// set new configuration
 				pdev->dev_config = cfgidx;
 				if (USBD_SetClassConfig(pdev , cfgidx) == UsbStatus::USBD_FAIL) {
 					USBD_CtlError(pdev , req);
@@ -366,7 +373,7 @@ static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 		}
 	}
 }
-
+*/
 /**
 * @brief  USBD_GetConfig
 *         Handle Get device configuration request
@@ -374,6 +381,7 @@ static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 * @param  req: usb request
 * @retval status
 */
+/*
 static void USBD_GetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	if (req->wLength != 1) {
 		USBD_CtlError(pdev , req);
@@ -394,7 +402,7 @@ static void USBD_GetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 		}
 	}
 }
-
+*/
 /**
 * @brief  USBD_GetStatus
 *         Handle Get Status request
@@ -402,6 +410,7 @@ static void USBD_GetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 * @param  req: usb request
 * @retval status
 */
+/*
 static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	switch (pdev->dev_state) {
 	case USBD_STATE_ADDRESSED:
@@ -425,7 +434,7 @@ static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 		break;
 	}
 }
-
+*/
 
 /**
 * @brief  USBD_SetFeature
@@ -434,6 +443,7 @@ static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) 
 * @param  req: usb request
 * @retval status
 */
+/*
 static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	if (req->wValue == USB_FEATURE_REMOTE_WAKEUP) {
 		pdev->dev_remote_wakeup = 1;
@@ -441,7 +451,7 @@ static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 		USBD_CtlSendStatus(pdev);
 	}
 }
-
+*/
 
 /**
 * @brief  USBD_ClrFeature
@@ -450,6 +460,7 @@ static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 * @param  req: usb request
 * @retval status
 */
+/*
 static void USBD_ClrFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
 	switch (pdev->dev_state) {
 	case USBD_STATE_ADDRESSED:
@@ -466,7 +477,7 @@ static void USBD_ClrFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 		break;
 	}
 }
-
+*/
 /**
 * @brief  USBD_ParseSetupRequest 
 *         Copy buffer into setup structure
@@ -505,6 +516,7 @@ void USBD_CtlError( USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req) {
   * @param  len : descriptor length
   * @retval None
   */
+/*
 void USBD_GetString(uint8_t *desc, uint8_t *unicode, uint16_t *len) {
 	uint8_t idx = 0;
 
@@ -519,13 +531,14 @@ void USBD_GetString(uint8_t *desc, uint8_t *unicode, uint16_t *len) {
 		}
 	}
 }
-
+*/
 /**
   * @brief  USBD_GetLen
   *         return the string length
    * @param  buf : pointer to the ascii string buffer
   * @retval string length
   */
+/*
 static uint8_t USBD_GetLen(uint8_t *buf)
 {
     uint8_t  len = 0;
@@ -538,6 +551,7 @@ static uint8_t USBD_GetLen(uint8_t *buf)
 
     return len;
 }
+*/
 /**
   * @}
   */ 

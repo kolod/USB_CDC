@@ -197,16 +197,16 @@ typedef struct _Device_cb
 /* USB Device descriptors structure */
 typedef struct
 {
-  uint8_t  *(*GetDeviceDescriptor)( UsbSpeed speed , uint16_t *length);  
-  uint8_t  *(*GetLangIDStrDescriptor)( UsbSpeed speed , uint16_t *length); 
-  uint8_t  *(*GetManufacturerStrDescriptor)( UsbSpeed speed , uint16_t *length);  
-  uint8_t  *(*GetProductStrDescriptor)( UsbSpeed speed , uint16_t *length);  
-  uint8_t  *(*GetSerialStrDescriptor)( UsbSpeed speed , uint16_t *length);  
-  uint8_t  *(*GetConfigurationStrDescriptor)( UsbSpeed speed , uint16_t *length);  
-  uint8_t  *(*GetInterfaceStrDescriptor)( UsbSpeed speed , uint16_t *length); 
+  uint8_t  *(*GetDeviceDescriptor)( UsbSpeed speed , uint16_t *length);
+  uint8_t  *(*GetLangIDStrDescriptor)( UsbSpeed speed , uint16_t *length);
+  uint8_t  *(*GetManufacturerStrDescriptor)( UsbSpeed speed , uint16_t *length);
+  uint8_t  *(*GetProductStrDescriptor)( UsbSpeed speed , uint16_t *length);
+  uint8_t  *(*GetSerialStrDescriptor)( UsbSpeed speed , uint16_t *length);
+  uint8_t  *(*GetConfigurationStrDescriptor)( UsbSpeed speed , uint16_t *length);
+  uint8_t  *(*GetInterfaceStrDescriptor)( UsbSpeed speed , uint16_t *length);
 #if (USBD_LPM_ENABLED == 1)
-  uint8_t  *(*GetBOSDescriptor)( UsbSpeed speed , uint16_t *length); 
-#endif  
+  uint8_t  *(*GetBOSDescriptor)( UsbSpeed speed , uint16_t *length);
+#endif
 } USBD_DescriptorsTypeDef;
 
 /* USB Device handle structure */
@@ -238,7 +238,7 @@ typedef struct _USBD_HandleTypeDef
   uint32_t                dev_remote_wakeup;
 
   USBD_SetupReqTypedef    request;
-  USBD_DescriptorsTypeDef *pDesc;
+//  USBD_DescriptorsTypeDef *pDesc;
   USBD_ClassTypeDef       *pClass;
   void                    *pClassData;  
   void                    *pUserData;    
