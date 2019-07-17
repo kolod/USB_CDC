@@ -137,20 +137,35 @@ private:
 		return getInterruptState(USB_OTG_GINTSTS_CMOD);
 	}
 
-	inline uint32_t ReadDevAllOutEpInterrupt() {
+	inline uint32_t readDevAllOutEpInterrupt() {
 		return (device()->DAINT & device()->DAINTMSK & 0xFFFF0000) >> 16;
 	}
 
-	inline uint32_t ReadDevOutEPInterrupt(uint8_t epnum) {
+	inline uint32_t readDevOutEPInterrupt(uint8_t epnum) {
 		return outEndpoint(epnum)->DOEPINT & device()->DOEPMSK;
 	}
 
-	inline uint32_t ReadDevAllInEpInterrupt() {
+	inline uint32_t readDevAllInEpInterrupt() {
 		return device()->DAINT & device()->DAINTMSK & 0xFFFF;
 	}
 
-	inline uint32_t ReadDevInEPInterrupt(uint8_t epnum) {
+	inline uint32_t readDevInEPInterrupt(uint8_t epnum) {
 		return inEndpoint(epnum)->DIEPINT & (((device()->DIEPEMPMSK >> epnum) & 1) << 7 | device()->DIEPMSK);
+	}
+
+	inline void setRxFiFo(uint16_t size) {
+		USB_OTG_FS->GRXFSIZ = size;              // Save size of FiFo buffer
+		USB_OTG_FS->DIEPTXF0_HNPTXFSIZ = size;   // Save offset for endpoint 0
+	}
+
+	inline void setTxFiFo(const uint8_t fifo, const uint16_t size) {
+		if (fifo == 0) {
+			USB_OTG_FS->DIEPTXF[0] = USB_OTG_FS->DIEPTXF0_HNPTXFSIZ + size;   // Save offset for endpoint 1
+			USB_OTG_FS->DIEPTXF0_HNPTXFSIZ |= (size << 16);                   // Save size of FiFo buffer
+		} else {
+			USB_OTG_FS->DIEPTXF[fifo] = USB_OTG_FS->DIEPTXF[fifo - 1] + size; // Save offset for next endpoint
+			if (fifo < 3) USB_OTG_FS->DIEPTXF[fifo - 1] |= (size << 16);      // Save size of FiFo buffer
+		}
 	}
 
 	constexpr static USB_OTG_DeviceTypeDef *device() {

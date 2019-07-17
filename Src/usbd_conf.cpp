@@ -7,7 +7,8 @@
 
 #include "config.h"
 
-PCD_HandleTypeDef hpcd_USB_OTG_FS;
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+
 void Error_Handler(void);
 static UsbStatus USBD_Get_USB_Status(HAL_StatusTypeDef hal_status);
 

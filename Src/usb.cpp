@@ -145,6 +145,7 @@ const uint8_t ClassConfigurationDescriptor[] = {
 };
 
 USBD_HandleTypeDef hUsbDeviceFS;
+PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 USB_Class::USB_Class() {
 	;
@@ -190,12 +191,24 @@ void USB_Class::init() {
 	hUsbDeviceFS.pClass     = nullptr;
 	hUsbDeviceFS.dev_state  = USBD_STATE_DEFAULT;
 	hUsbDeviceFS.id         = DEVICE_FS;
+	hUsbDeviceFS.pData      = &hpcd_USB_OTG_FS;
 
 	// Initialize low level driver
-	USBD_LL_Init(&hUsbDeviceFS);
+	hpcd_USB_OTG_FS.pData                    = &hUsbDeviceFS;
+	hpcd_USB_OTG_FS.Instance                 = USB_OTG_FS;
+	hpcd_USB_OTG_FS.Init.dev_endpoints       = 4;
+	hpcd_USB_OTG_FS.Init.speed               = PCD_SPEED_FULL;
+	hpcd_USB_OTG_FS.Init.Sof_enable          = DISABLE;
+	hpcd_USB_OTG_FS.Init.low_power_enable    = DISABLE;
+	hpcd_USB_OTG_FS.Init.vbus_sensing_enable = ENABLE;
 
+	if (HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) Error_Handler( );
 
+	setRxFiFo(0x80);    // 128
+	setTxFiFo(0, 0x40); //  64
+	setTxFiFo(1, 0x80); // 128
 
+	/* Link the driver to the stack. */
 	if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != UsbStatus::USBD_OK) Error_Handler();
 	if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != UsbStatus::USBD_OK) Error_Handler();
 	start();
@@ -607,13 +620,13 @@ void USB_Class::onResume() {
 void USB_Class::onIn() {
 
 	// Read in the device interrupt bits
-	uint32_t ep_intr = ReadDevAllInEpInterrupt();
+	uint32_t ep_intr = readDevAllInEpInterrupt();
 
 	uint32_t epnum = 0;
 	while (ep_intr) {
 		if (ep_intr & 1) {
 
-			uint32_t epint = ReadDevInEPInterrupt(epnum);
+			uint32_t epint = readDevInEPInterrupt(epnum);
 
 			if ((epint & USB_OTG_DIEPINT_XFRC) == USB_OTG_DIEPINT_XFRC) {
 				uint32_t fifoemptymsk = 0x1U << epnum;
@@ -686,13 +699,13 @@ void USB_Class::onDataInStage(uint8_t epnum, uint8_t *pdata) {
 void USB_Class::onOut() {
 
 	// Read in the device interrupt bits
-	uint32_t ep_intr = ReadDevAllOutEpInterrupt();
+	uint32_t ep_intr = readDevAllOutEpInterrupt();
 
 	uint32_t epnum = 0;
 	while (ep_intr) {
 		if (ep_intr & 1) {
 
-			uint32_t epint = ReadDevOutEPInterrupt(epnum);
+			uint32_t epint = readDevOutEPInterrupt(epnum);
 
 			if ((epint & USB_OTG_DOEPINT_XFRC) == USB_OTG_DOEPINT_XFRC) {
 				clearOutEndpointInterrupt(epnum, USB_OTG_DOEPINT_XFRC);
