@@ -49,7 +49,10 @@ private:
 	void endpointTransmit(uint8_t ep_addr, uint8_t *pBuf, uint32_t len);
 	void startEndpoint0Xfer(USB_OTG_EPTypeDef *ep);
 	void startEndpointXfer(USB_OTG_EPTypeDef *ep);
+	void deviceInit();
 
+	bool flushTxFifo(int32_t num);
+	bool flushRxFifo();
 
 	void onConnect();
 	void onDisconnect();
@@ -96,8 +99,31 @@ private:
 		USB_OTG_FS->GAHBCFG |= USB_OTG_GAHBCFG_GINT;
 	}
 
+	inline void disableGlobalInterrupt() {
+		USB_OTG_FS->GAHBCFG &= ~USB_OTG_GAHBCFG_GINT;
+	}
+
+	inline void setDeviceMode() {
+		USB_OTG_FS->GUSBCFG &= ~(USB_OTG_GUSBCFG_FHMOD | USB_OTG_GUSBCFG_FDMOD);
+		USB_OTG_FS->GUSBCFG |= USB_OTG_GUSBCFG_FDMOD;
+		millisecondDelay(50);
+	}
+
+	inline void setDeviceSpeed(uint8_t speed) {
+		device()->DCFG |= speed;
+	}
+
+	inline void restartPhyClock() {
+		*reinterpret_cast<volatile uint32_t*>(USB_OTG_FS_PERIPH_BASE + USB_OTG_PCGCCTL_BASE) = 0;
+	}
+
 	inline void deviceConnect() {
 		device()->DCTL &= ~USB_OTG_DCTL_SDIS;
+	}
+
+	inline void deviceDisconnect() {
+		device()->DCTL |= USB_OTG_DCTL_SDIS;
+		millisecondDelay(3);
 	}
 
 	inline void maskInterrupt(uint32_t interrupt) {
@@ -130,6 +156,28 @@ private:
 
 	inline bool getInterruptState(uint32_t interrupt) {
 		return (readInterrupts() & interrupt) == interrupt;
+	}
+
+	inline bool selectPhy() {
+		// Init the Core (common init.)
+		USB_OTG_FS->GUSBCFG |= USB_OTG_GUSBCFG_PHYSEL;  // TODO: read only bit ?
+
+		// Reset after a PHY select and set Host mode
+		for (uint32_t timeout = 200000; timeout; timeout--) {
+			if (USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_AHBIDL) return true;
+		}
+
+		return false;
+	}
+
+	inline bool coreSoftReset() {
+		USB_OTG_FS->GRSTCTL |= USB_OTG_GRSTCTL_CSRST;
+
+		for (uint32_t timeout = 200000; timeout; timeout--) {
+			if ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_CSRST) == 0) return true;
+		}
+
+		return false;
 	}
 
 	// Get OTG mode. Return values: true - host, false - device

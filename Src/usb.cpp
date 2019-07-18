@@ -201,6 +201,55 @@ void USB_Class::init() {
 	hpcd_USB_OTG_FS.Init.Sof_enable          = DISABLE;
 	hpcd_USB_OTG_FS.Init.low_power_enable    = DISABLE;
 	hpcd_USB_OTG_FS.Init.vbus_sensing_enable = ENABLE;
+	hpcd_USB_OTG_FS.Lock                     = HAL_UNLOCKED;     // Allocate lock resource and initialize it
+	hpcd_USB_OTG_FS.State                    = HAL_PCD_STATE_BUSY;
+
+	// Disable the Interrupts
+	disableGlobalInterrupt();
+
+	HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+
+	if (!selectPhy())     Error_Handler();
+	if (!coreSoftReset()) Error_Handler();
+
+	// Deactivate the power down
+	USB_OTG_FS->GCCFG = USB_OTG_GCCFG_PWRDWN;
+
+	// Force Device Mode
+	setDeviceMode();
+
+	// Init endpoints structures
+	for (int index = 0; index < 15 ; index++) {
+		// Init ep structure
+		hpcd_USB_OTG_FS.IN_ep[index].is_in        = 1U;
+		hpcd_USB_OTG_FS.IN_ep[index].num          = index;
+		hpcd_USB_OTG_FS.IN_ep[index].tx_fifo_num  = index;
+		// Control until ep is activated
+		hpcd_USB_OTG_FS.IN_ep[index].type         = EP_TYPE_CTRL;
+		hpcd_USB_OTG_FS.IN_ep[index].maxpacket    = 0U;
+		hpcd_USB_OTG_FS.IN_ep[index].xfer_buff    = 0U;
+		hpcd_USB_OTG_FS.IN_ep[index].xfer_len     = 0U;
+		// Init ep structure
+		hpcd_USB_OTG_FS.OUT_ep[index].is_in       = 0U;
+		hpcd_USB_OTG_FS.OUT_ep[index].num         = index;
+//		hpcd_USB_OTG_FS.OUT_ep[index].tx_fifo_num = index;
+		// Control until ep is activated
+		hpcd_USB_OTG_FS.OUT_ep[index].type        = EP_TYPE_CTRL;
+		hpcd_USB_OTG_FS.OUT_ep[index].maxpacket   = 0U;
+		hpcd_USB_OTG_FS.OUT_ep[index].xfer_buff   = 0U;
+		hpcd_USB_OTG_FS.OUT_ep[index].xfer_len    = 0U;
+	}
+
+	// Init Device
+	deviceInit();
+
+	hpcd_USB_OTG_FS.USB_Address                   = 0U;
+	hpcd_USB_OTG_FS.State                         = HAL_PCD_STATE_READY;
+
+	deviceDisconnect();
+
+
 
 	if (HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) Error_Handler( );
 
@@ -212,6 +261,106 @@ void USB_Class::init() {
 	if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != UsbStatus::USBD_OK) Error_Handler();
 	if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != UsbStatus::USBD_OK) Error_Handler();
 	start();
+}
+
+void USB_Class::deviceInit() {
+
+	for (int index = 0; index < 15 ; index++) {
+		USB_OTG_FS->DIEPTXF[index] = 0;
+	}
+
+	/*Activate VBUS Sensing B */
+	USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBUSBSEN;
+
+	/* Restart the Phy Clock */
+	restartPhyClock();
+
+	/* Device mode configuration */
+	device()->DCFG |= DCFG_FRAME_INTERVAL_80;
+
+	/* Set Full speed phy */
+	setDeviceSpeed(USB_OTG_SPEED_FULL);
+
+	/* Flush the FIFOs */
+	flushTxFifo(0x10); /* all Tx FIFOs */
+	flushRxFifo();
+
+	/* Clear all pending Device Interrupts */
+	device()->DIEPMSK  = 0;
+	device()->DOEPMSK  = 0;
+	device()->DAINT    = 0xFFFFFFFF;
+	device()->DAINTMSK = 0;
+
+	for (uint32_t index = 0; index < hpcd_USB_OTG_FS.Init.dev_endpoints; index++) {
+		if ((inEndpoint(index)->DIEPCTL & USB_OTG_DIEPCTL_EPENA) == USB_OTG_DIEPCTL_EPENA) {
+			inEndpoint(index)->DIEPCTL = (USB_OTG_DIEPCTL_EPDIS | USB_OTG_DIEPCTL_SNAK);
+		} else {
+			inEndpoint(index)->DIEPCTL = 0;
+		}
+
+		inEndpoint(index)->DIEPTSIZ = 0;
+		inEndpoint(index)->DIEPINT  = 0xFF;
+	}
+
+	for (uint32_t index = 0; index < hpcd_USB_OTG_FS.Init.dev_endpoints; index++) {
+		if ((outEndpoint(index)->DOEPCTL & USB_OTG_DOEPCTL_EPENA) == USB_OTG_DOEPCTL_EPENA) {
+			outEndpoint(index)->DOEPCTL = (USB_OTG_DOEPCTL_EPDIS | USB_OTG_DOEPCTL_SNAK);
+		} else {
+			outEndpoint(index)->DOEPCTL = 0;
+		}
+
+		outEndpoint(index)->DOEPTSIZ = 0;
+		outEndpoint(index)->DOEPINT  = 0xFF;
+	}
+
+	device()->DIEPMSK &= ~(USB_OTG_DIEPMSK_TXFURM);
+
+	/* Disable all interrupts. */
+	USB_OTG_FS->GINTMSK = 0;
+
+	/* Clear any pending interrupts */
+	USB_OTG_FS->GINTSTS = 0xBFFFFFFF;
+
+	/* Enable the common interrupts */
+	USB_OTG_FS->GINTMSK |= USB_OTG_GINTMSK_RXFLVLM;
+
+	/* Enable interrupts matching to the Device mode ONLY */
+	USB_OTG_FS->GINTMSK |= (USB_OTG_GINTMSK_USBSUSPM | USB_OTG_GINTMSK_USBRST |\
+			USB_OTG_GINTMSK_ENUMDNEM | USB_OTG_GINTMSK_IEPINT |\
+			USB_OTG_GINTMSK_OEPINT   | USB_OTG_GINTMSK_IISOIXFRM|\
+			USB_OTG_GINTMSK_PXFRM_IISOOXFRM | USB_OTG_GINTMSK_WUIM);
+
+	if (hpcd_USB_OTG_FS.Init.Sof_enable) {
+		USB_OTG_FS->GINTMSK |= USB_OTG_GINTMSK_SOFM;
+	}
+
+	if (hpcd_USB_OTG_FS.Init.vbus_sensing_enable == ENABLE) {
+		USB_OTG_FS->GINTMSK |= (USB_OTG_GINTMSK_SRQIM | USB_OTG_GINTMSK_OTGINT);
+	}
+}
+
+bool USB_Class::flushTxFifo(int32_t num) {
+	USB_OTG_FS->GRSTCTL = (USB_OTG_GRSTCTL_TXFFLSH | (uint32_t) (num << 6));
+
+	for (uint32_t timeout = 200000; timeout; timeout--) {
+		if ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_TXFFLSH) == 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool USB_Class::flushRxFifo() {
+	USB_OTG_FS->GRSTCTL = USB_OTG_GRSTCTL_RXFFLSH;
+
+	for (uint32_t timeout = 200000; timeout; timeout--) {
+		if ((USB_OTG_FS->GRSTCTL & USB_OTG_GRSTCTL_RXFFLSH) == 0) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void USB_Class::start() {
@@ -575,7 +724,7 @@ void USB_Class::onRxQLevel() {
 void USB_Class::onEnumerationDone() {
 	activateSetup();
 
-	hpcd_USB_OTG_FS.Init.speed    = USB_OTG_SPEED_FULL;
+	hpcd_USB_OTG_FS.Init.speed    = PCD_SPEED_FULL; // USB_OTG_SPEED_FULL;
 	hpcd_USB_OTG_FS.Init.ep0_mps  = USB_OTG_FS_MAX_PACKET_SIZE ;
 
 	USB_OTG_FS->GUSBCFG &= ~USB_OTG_GUSBCFG_TRDT;

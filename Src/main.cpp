@@ -21,8 +21,12 @@ extern "C" int main(void) {
 	}
 }
 
-extern "C" void Error_Handler(void) {}
+extern "C" void Error_Handler(void) {
+	for (;;);
+}
 
 #ifdef  USE_FULL_ASSERT
-extern "C" void assert_failed(uint8_t *file, uint32_t line) {}
+extern "C" void assert_failed(uint8_t *file, uint32_t line) {
+	Error_Handler();
+}
 #endif // USE_FULL_ASSERT
